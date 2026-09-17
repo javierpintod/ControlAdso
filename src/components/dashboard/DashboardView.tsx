@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { EnvironmentId } from '../../types';
 
@@ -32,17 +32,40 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     c.code.toLowerCase().includes(categoryFilter.toLowerCase())
   );
 
-  const envTabs: { id: EnvironmentId; label: string; count: number; icon: string }[] = [
-    { id: 'all', label: 'Todos los Ambientes', count: assets.length, icon: 'domain' },
-    ...environments.map(env => ({
-      id: env.id as EnvironmentId,
-      label: env.name,
-      count: assets.filter(a => a.environmentId === env.id).length,
-      icon: env.icon || 'meeting_room'
-    })),
-    { id: 'service', label: 'Mesa de Servicio', count: assets.filter(a => a.environmentId === 'service').length, icon: 'support_agent' },
-    { id: 'damaged', label: 'Almacén de Dañados', count: assets.filter(a => a.environmentId === 'damaged').length, icon: 'warning' }
-  ];
+  const envTabs: { id: EnvironmentId; label: string; count: number; icon: string }[] = useMemo(() => {
+    const tabs: { id: EnvironmentId; label: string; count: number; icon: string }[] = [
+      { id: 'all', label: 'Todos los Ambientes', count: assets.length, icon: 'domain' }
+    ];
+
+    environments.forEach(env => {
+      tabs.push({
+        id: env.id as EnvironmentId,
+        label: env.name,
+        count: assets.filter(a => a.environmentId === env.id).length,
+        icon: env.icon || (env.id === 'service' ? 'support_agent' : env.id === 'damaged' ? 'warning' : 'meeting_room')
+      });
+    });
+
+    if (!environments.some(e => e.id === 'service')) {
+      tabs.push({
+        id: 'service',
+        label: 'Mesa de Servicio',
+        count: assets.filter(a => a.environmentId === 'service').length,
+        icon: 'support_agent'
+      });
+    }
+
+    if (!environments.some(e => e.id === 'damaged')) {
+      tabs.push({
+        id: 'damaged',
+        label: 'Almacén de Dañados',
+        count: assets.filter(a => a.environmentId === 'damaged').length,
+        icon: 'warning'
+      });
+    }
+
+    return tabs;
+  }, [environments, assets]);
 
   const totalAssetsCount = assets.length;
   const operativeAssetsCount = assets.filter(a => a.physicalStatus === 'operativo').length;
