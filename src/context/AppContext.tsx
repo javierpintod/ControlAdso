@@ -120,6 +120,7 @@ interface AppContextType {
   
   // Actions
   switchRole: (role: UserRole) => void;
+  switchUser: (userId: string) => void;
   setCampus: (id: CampusId, name: string) => void;
   setActiveEnvironmentTab: (env: EnvironmentId) => void;
   toggleTheme: () => void;
@@ -875,15 +876,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const switchRole = (newRole: UserRole) => {
     setCurrentRole(newRole);
+    const matchedUser = users.find(u => u.role === newRole) || INITIAL_USERS.find(u => u.role === newRole) || INITIAL_USERS[0];
+    setCurrentUser(matchedUser);
+    
     if (newRole === 'admin') {
-      setCurrentUser(users[0]);
       showToast('Modo de acceso cambiado a: Administrador (RW - Control Total)', 'info');
     } else if (newRole === 'consulta') {
-      setCurrentUser(users[1]);
       showToast('Modo de acceso cambiado a: Auditor / Consulta (Solo Lectura)', 'info');
     } else {
-      setCurrentUser(users[2]);
       showToast('Modo de acceso cambiado a: Técnico de Soporte', 'info');
+    }
+  };
+
+  const switchUser = (userId: string) => {
+    const userToSwitch = users.find(u => u.id === userId);
+    if (userToSwitch) {
+      setCurrentUser(userToSwitch);
+      setCurrentRole(userToSwitch.role);
+      showToast(`Sesión iniciada como: ${userToSwitch.name}`, 'success');
     }
   };
 
@@ -1504,6 +1514,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         importEntireBackupJson,
         resetAllDataToFactory,
         switchRole,
+        switchUser,
         setCampus,
         setActiveEnvironmentTab,
         toggleTheme,
