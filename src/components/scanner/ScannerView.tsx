@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
+import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library';
 
 interface ScannerViewProps {
   onNavigate: (view: string) => void;
@@ -9,14 +10,65 @@ export const ScannerView: React.FC<ScannerViewProps> = ({ onNavigate }) => {
   const { assets, setSelectedAsset, verifyAssetInAudit, showToast } = useApp();
   const [scannedSerial, setScannedSerial] = useState('SN-8842-LAP');
   const [detectedAsset, setDetectedAsset] = useState(assets[0]);
+  const [error, setError] = useState<string | null>(null);
+  
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const readerRef = useRef<BrowserMultiFormatReader | null>(null);
 
-  const handleScan = (serial: string) => {
+  useEffect(() => {
+    const codeReader = new BrowserMultiFormatReader();
+    readerRef.current = codeReader;
+    
+    codeReader.listVideoInputDevices()
+      .then((videoInputDevices) => {
+        if (videoInputDevices.length > 0) {
+          let selectedDeviceId = videoInputDevices[0].deviceId;
+          const backCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('rear'));
+          if (backCamera) {
+            selectedDeviceId = backCamera.deviceId;
+          }
+
+          codeReader.decodeFromVideoDevice(selectedDeviceId, videoRef.current, (result, err) => {
+            if (result) {
+              const text = result.getText();
+              handleScan(text);
+            }
+            if (err && !(err instanceof NotFoundException)) {
+              console.error(err);
+            }
+          });
+        } else {
+          setError('No se encontró cámara.');
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        setError('Error accediendo a la cámara.');
+      });
+
+    return () => {
+      if (readerRef.current) {
+        readerRef.current.reset();
+      }
+    };
+  }, []);
+
+  const handleScan = (text: string) => {
+    let serial = text;
+    if (text.includes('QR-SENA-')) {
+      serial = text.replace('QR-SENA-', '');
+    }
+    
     setScannedSerial(serial);
-    const found = assets.find(a => a.serialNumber.toLowerCase() === serial.toLowerCase());
+    const found = assets.find(a => 
+      a.serialNumber.toLowerCase() === serial.toLowerCase() || 
+      (a.assetCode && a.assetCode.toLowerCase() === serial.toLowerCase())
+    );
+    
     if (found) {
       setDetectedAsset(found);
       setSelectedAsset(found);
-      showToast(`¡Código QR detectado! ${found.name}`, 'success', 'qr_code_scanner');
+      showToast(`¡Código detectado! ${found.name}`, 'success', 'qr_code_scanner');
     } else {
       showToast(`Activo con serial ${serial} no hallado en base de datos.`, 'warning');
     }
@@ -52,15 +104,21 @@ export const ScannerView: React.FC<ScannerViewProps> = ({ onNavigate }) => {
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
               Visor de Cámara Óptica
             </span>
-            <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400">1080p 60FPS</span>
+            <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400">En Vivo</span>
           </div>
 
           <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center shadow-inner">
-            <img
-              src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=600&q=80"
-              alt="Hardware sensor backdrop"
-              className="w-full h-full object-cover opacity-30"
-            />
+            {error ? (
+               <div className="text-rose-500 text-center p-4 text-sm font-semibold">{error}</div>
+            ) : (
+              <video 
+                ref={videoRef} 
+                className="w-full h-full object-cover" 
+                autoPlay 
+                playsInline 
+                muted 
+              />
+            )}
 
             {/* Target Corners */}
             <div className="absolute inset-10 rounded-2xl flex flex-col justify-between pointer-events-none">
@@ -109,12 +167,14 @@ export const ScannerView: React.FC<ScannerViewProps> = ({ onNavigate }) => {
               <span className="material-symbols-outlined text-blue-600 dark:text-cyan-400 text-[20px]">verified</span>
               Activo Identificado
             </span>
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-mono text-xs font-bold">
-              COINCIDENCIA 100%
-            </span>
+            {detectedAsset && (
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-mono text-xs font-bold">
+                COINCIDENCIA 100%
+              </span>
+            )}
           </div>
 
-          {detectedAsset && (
+          {detectedAsset ? (
             <div className="flex flex-col gap-4">
               <div className="flex items-start gap-3.5">
                 <div className="w-16 h-16 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
@@ -172,6 +232,12 @@ export const ScannerView: React.FC<ScannerViewProps> = ({ onNavigate }) => {
                   <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                 </button>
               </div>
+            </div>
+          ) : (
+            <div className="p-8 text-center bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 text-slate-400 flex flex-col items-center">
+              <span className="material-symbols-outlined text-4xl mb-2 text-slate-300">qr_code_scanner</span>
+              <p className="text-sm font-semibold">Esperando lectura de código QR</p>
+              <p className="text-xs text-slate-400 mt-1">Alinee el código del activo con la cámara</p>
             </div>
           )}
         </div>

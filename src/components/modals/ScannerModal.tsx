@@ -1,17 +1,74 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
+import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library';
 
 export const ScannerModal: React.FC = () => {
   const { activeModal, closeModal, verifyAssetInAudit, showToast } = useApp();
   const [flashOn, setFlashOn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const readerRef = useRef<BrowserMultiFormatReader | null>(null);
+
+  useEffect(() => {
+    if (activeModal === 'scanner') {
+      const codeReader = new BrowserMultiFormatReader();
+      readerRef.current = codeReader;
+      
+      codeReader.listVideoInputDevices()
+        .then((videoInputDevices) => {
+          if (videoInputDevices.length > 0) {
+            let selectedDeviceId = videoInputDevices[0].deviceId;
+            
+            // Prefer back camera
+            const backCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('rear'));
+            if (backCamera) {
+              selectedDeviceId = backCamera.deviceId;
+            }
+
+            codeReader.decodeFromVideoDevice(selectedDeviceId, videoRef.current, (result, err) => {
+              if (result) {
+                const text = result.getText();
+                handleScanResult(text);
+              }
+              if (err && !(err instanceof NotFoundException)) {
+                console.error(err);
+              }
+            });
+          } else {
+            setError('No se encontró cámara.');
+          }
+        })
+        .catch((err) => {
+          console.error(err);
+          setError('Error accediendo a la cámara.');
+        });
+    }
+
+    return () => {
+      if (readerRef.current) {
+        readerRef.current.reset();
+      }
+    };
+  }, [activeModal]);
+
+  const handleScanResult = (text: string) => {
+    if (readerRef.current) {
+      readerRef.current.reset();
+    }
+    
+    // Attempt to extract SN from QR text if it's not exactly the SN
+    // e.g. QR-SENA-SN-1234 -> SN-1234, or just pass the text
+    let serialToVerify = text;
+    if (text.includes('QR-SENA-')) {
+      serialToVerify = text.replace('QR-SENA-', '');
+    }
+    
+    verifyAssetInAudit(serialToVerify, 'Scanner QR');
+    closeModal();
+    showToast(`¡Código escaneado! ${serialToVerify}`, 'success', 'qr_code_scanner');
+  };
 
   if (activeModal !== 'scanner') return null;
-
-  const handleSimulateScan = () => {
-    verifyAssetInAudit('SN-9012-ROB', 'Banco 1 (Sensor Óptico QR)');
-    closeModal();
-    showToast('¡Código QR detectado! Brazo Robótico Dobot verificado', 'success', 'qr_code_scanner');
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
@@ -22,7 +79,10 @@ export const ScannerModal: React.FC = () => {
             <h3 className="font-headline font-bold text-base text-slate-900 dark:text-white">Escáner Óptico QR</h3>
           </div>
           <button
-            onClick={closeModal}
+            onClick={() => {
+              if (readerRef.current) readerRef.current.reset();
+              closeModal();
+            }}
             className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-white flex items-center justify-center"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
@@ -31,11 +91,17 @@ export const ScannerModal: React.FC = () => {
 
         {/* Viewfinder Viewport */}
         <div className="relative w-full aspect-square bg-slate-950 rounded-2xl overflow-hidden flex items-center justify-center shadow-inner">
-          <img
-            src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=500&q=80"
-            alt="Hardware sensor backdrop"
-            className="w-full h-full object-cover opacity-35"
-          />
+          {error ? (
+             <div className="text-rose-500 text-center p-4 text-sm font-semibold">{error}</div>
+          ) : (
+            <video 
+              ref={videoRef} 
+              className="w-full h-full object-cover" 
+              autoPlay 
+              playsInline 
+              muted 
+            />
+          )}
 
           {/* Viewfinder corners and laser line */}
           <div className="absolute inset-8 rounded-xl flex flex-col justify-between pointer-events-none">
@@ -49,37 +115,12 @@ export const ScannerModal: React.FC = () => {
               <div className="w-6 h-6 border-b-2 border-r-2 border-cyan-400"></div>
             </div>
           </div>
-
-          <div className="absolute top-3 right-3 flex items-center gap-1.5">
-            <button
-              onClick={() => setFlashOn(prev => !prev)}
-              className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-                flashOn ? 'bg-amber-400 text-slate-950' : 'bg-white/20 text-white'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[18px]">
-                {flashOn ? 'flash_on' : 'flash_off'}
-              </span>
-            </button>
-          </div>
-
-          <span className="absolute bottom-3 bg-slate-900/80 text-white text-[11px] px-3 py-1 rounded-full font-medium backdrop-blur-sm">
-            Centrar etiqueta de serial o placa QR
-          </span>
         </div>
 
         <div className="flex flex-col gap-2">
-          <button
-            onClick={handleSimulateScan}
-            className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.99]"
-          >
-            <span className="material-symbols-outlined text-[18px]">qr_code_scanner</span>
-            <span>Simular Detección de Código QR</span>
-          </button>
-          <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 px-1">
-            <span>Motor: ZXing / QuaggaJS</span>
-            <span>60 FPS • HD 1080p</span>
-          </div>
+           <div className="text-center text-xs text-slate-500">
+             Alinee el código QR con el retículo para escanear
+           </div>
         </div>
       </div>
     </div>
