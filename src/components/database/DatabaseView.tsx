@@ -5,7 +5,10 @@ import {
   activeSupabaseUrl, 
   activeSupabaseKey, 
   updateSupabaseCredentials, 
-  getSupabaseClient 
+  getSupabaseClient,
+  checkSupabaseHealth,
+  normalizeSupabaseUrl,
+  SupabaseHealthCheckResult
 } from '../../lib/supabase';
 
 interface DatabaseViewProps {
@@ -22,7 +25,29 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({ onNavigate }) => {
   const [supabaseKey, setSupabaseKey] = useState(activeSupabaseKey);
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [testMessage, setTestMessage] = useState('');
+  const [healthData, setHealthData] = useState<SupabaseHealthCheckResult | null>(null);
   const [selectedTable, setSelectedTable] = useState<string>('assets');
+
+  // Auto-verificar conexión si hay credenciales al montar la vista
+  useEffect(() => {
+    if (activeSupabaseUrl && activeSupabaseKey) {
+      setTestStatus('testing');
+      setTestMessage('Verificando conexión con el clúster de Supabase...');
+      checkSupabaseHealth().then(res => {
+        setHealthData(res);
+        if (res.connected) {
+          setTestStatus('success');
+          setTestMessage(res.message);
+        } else {
+          setTestStatus('error');
+          setTestMessage(res.message);
+        }
+      }).catch(err => {
+        setTestStatus('error');
+        setTestMessage('Error al verificar estado de Supabase');
+      });
+    }
+  }, []);
 
   const handleCopySchema = () => {
     navigator.clipboard.writeText(SUPABASE_SQL_SCHEMA);
@@ -51,10 +76,13 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({ onNavigate }) => {
       return;
     }
 
-    setTestStatus('testing');
-    setTestMessage('Estableciendo handshake con la base de datos en Supabase...');
+    const normalized = normalizeSupabaseUrl(supabaseUrl.trim());
+    setSupabaseUrl(normalized);
 
-    const result = updateSupabaseCredentials(supabaseUrl.trim(), supabaseKey.trim());
+    setTestStatus('testing');
+    setTestMessage('Estableciendo conexión y validando esquema en Supabase...');
+
+    const result = updateSupabaseCredentials(normalized, supabaseKey.trim());
     if (!result.success || !result.client) {
       setTestStatus('error');
       setTestMessage(result.error || 'Error al inicializar el cliente de Supabase.');
@@ -63,27 +91,16 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({ onNavigate }) => {
     }
 
     try {
-      // Test querying a public table or checking health
-      const { data, error } = await result.client
-        .from('campuses')
-        .select('id, name')
-        .limit(1);
-
-      if (error) {
-        if (error.code === '42P01') {
-          // Table doesn't exist yet, but connection succeeded!
-          setTestStatus('success');
-          setTestMessage('¡Conexión establecida con éxito a Supabase! (Aviso: Las tablas aún no han sido creadas. Ejecuta el script SQL en el SQL Editor de Supabase).');
-          showToast('Conectado a Supabase. Requiere ejecutar el SQL en Supabase.', 'info');
-        } else {
-          setTestStatus('error');
-          setTestMessage(`Error de Supabase: ${error.message} (Código: ${error.code})`);
-          showToast(`Error al consultar Supabase: ${error.message}`, 'error');
-        }
-      } else {
+      const health = await checkSupabaseHealth(result.client);
+      setHealthData(health);
+      if (health.connected) {
         setTestStatus('success');
-        setTestMessage(`¡Conexión exitosa y verificada! Tablas activas y operativas en Supabase.`);
-        showToast('¡Conectado y sincronizado con Supabase Cloud!', 'success', 'verified');
+        setTestMessage(health.message);
+        showToast('¡Conectado exitosamente con Supabase Cloud!', 'success', 'verified');
+      } else {
+        setTestStatus('error');
+        setTestMessage(health.message);
+        showToast('Fallo al validar las tablas en Supabase', 'error');
       }
     } catch (err: unknown) {
       setTestStatus('error');
@@ -91,6 +108,16 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({ onNavigate }) => {
       setTestMessage(`Fallo en la petición HTTP a Supabase: ${msg}`);
       showToast('Error de red al contactar Supabase', 'error');
     }
+  };
+
+  const handleClearCredentials = () => {
+    updateSupabaseCredentials('', '');
+    setSupabaseUrl('');
+    setSupabaseKey('');
+    setTestStatus('idle');
+    setTestMessage('');
+    setHealthData(null);
+    showToast('Credenciales de Supabase eliminadas del almacenamiento local', 'info');
   };
 
   const tablesData = [
@@ -532,48 +559,69 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({ onNavigate }) => {
 
             <form onSubmit={handleSaveAndTestConnection} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Supabase Project URL
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Supabase Project URL
+                  </label>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                    Auto-normalización activa
+                  </span>
+                </div>
                 <input
                   type="text"
                   value={supabaseUrl}
                   onChange={e => setSupabaseUrl(e.target.value)}
-                  placeholder="https://xyzprojectid.supabase.co"
+                  placeholder="https://najjrhdvnhexffzseaah.supabase.co"
                   className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
+                <p className="text-[10px] text-slate-400">
+                  Acepta formato API (<code>https://&lt;id&gt;.supabase.co</code>), URL del Dashboard de Supabase o sólo el ID del proyecto.
+                </p>
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Supabase Anon (Public) Key
+                  Supabase Anon (Public / Publishable) Key
                 </label>
                 <input
                   type="password"
                   value={supabaseKey}
                   onChange={e => setSupabaseKey(e.target.value)}
-                  placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  placeholder="sb_publishable_... o eyJhbGciOiJIUz..."
                   className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={testStatus === 'testing'}
-                className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-md transition-all active:scale-98 disabled:opacity-50"
-              >
-                {testStatus === 'testing' ? (
-                  <>
-                    <span className="material-symbols-outlined text-[18px] animate-spin">refresh</span>
-                    <span>Verificando conexión con Supabase...</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="material-symbols-outlined text-[18px]">bolt</span>
-                    <span>Probar y Guardar Conexión</span>
-                  </>
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="submit"
+                  disabled={testStatus === 'testing'}
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-md transition-all active:scale-98 disabled:opacity-50"
+                >
+                  {testStatus === 'testing' ? (
+                    <>
+                      <span className="material-symbols-outlined text-[18px] animate-spin">refresh</span>
+                      <span>Verificando conexión con Supabase...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-[18px]">bolt</span>
+                      <span>Probar y Guardar Conexión</span>
+                    </>
+                  )}
+                </button>
+
+                {(supabaseUrl || supabaseKey) && (
+                  <button
+                    type="button"
+                    onClick={handleClearCredentials}
+                    className="px-3 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-semibold transition-all"
+                    title="Desconectar y limpiar credenciales"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">link_off</span>
+                  </button>
                 )}
-              </button>
+              </div>
             </form>
 
             {/* Test status feedback */}
@@ -589,7 +637,29 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({ onNavigate }) => {
                   <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5">
                     {testStatus === 'success' ? 'check_circle' : testStatus === 'error' ? 'error' : 'hourglass_top'}
                   </span>
-                  <p>{testMessage}</p>
+                  <div className="flex flex-col gap-1 w-full">
+                    <p className="font-semibold">{testMessage}</p>
+                    {healthData?.counts && testStatus === 'success' && (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2 pt-2 border-t border-emerald-500/20">
+                        <div className="bg-white/60 dark:bg-slate-900/60 p-2 rounded-lg text-center">
+                          <span className="block text-slate-500 dark:text-slate-400 text-[10px]">Sedes</span>
+                          <span className="font-bold text-sm text-emerald-700 dark:text-emerald-300">{healthData.counts.campuses}</span>
+                        </div>
+                        <div className="bg-white/60 dark:bg-slate-900/60 p-2 rounded-lg text-center">
+                          <span className="block text-slate-500 dark:text-slate-400 text-[10px]">Ambientes</span>
+                          <span className="font-bold text-sm text-emerald-700 dark:text-emerald-300">{healthData.counts.environments}</span>
+                        </div>
+                        <div className="bg-white/60 dark:bg-slate-900/60 p-2 rounded-lg text-center">
+                          <span className="block text-slate-500 dark:text-slate-400 text-[10px]">Activos</span>
+                          <span className="font-bold text-sm text-emerald-700 dark:text-emerald-300">{healthData.counts.assets}</span>
+                        </div>
+                        <div className="bg-white/60 dark:bg-slate-900/60 p-2 rounded-lg text-center">
+                          <span className="block text-slate-500 dark:text-slate-400 text-[10px]">Familias</span>
+                          <span className="font-bold text-sm text-emerald-700 dark:text-emerald-300">{healthData.counts.categories}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

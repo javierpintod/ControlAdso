@@ -42,11 +42,11 @@ npx supabase db push
 En la raíz del proyecto web, configura las credenciales de tu proyecto Supabase:
 
 ```env
-# URL de tu proyecto Supabase
-VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
+# URL de la API de tu proyecto Supabase (Formato: https://<project-ref>.supabase.co)
+VITE_SUPABASE_URL=https://najjrhdvnhexffzseaah.supabase.co
 
 # Llave anónima pública (anon / public key)
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+VITE_SUPABASE_ANON_KEY=sb_publishable_Fad2vS1Z5C5Fa3VHZeWozQ_b5iHi2r4
 ```
 
 *(También puedes ingresarlas dinámicamente desde la interfaz gráfica de la aplicación en la pestaña "Base de Datos" -> "Conexión Supabase Cloud").*
