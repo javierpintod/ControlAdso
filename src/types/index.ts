@@ -39,12 +39,58 @@ export interface Environment {
   totalCapacity: number;
   assignedCount: number;
   occupancyPercentage: number;
+  assignedInstructorId?: string;
+  assignedInstructorName?: string;
+  assignedInstructorEmail?: string;
   categoryBreakdown: {
     computo: number;
     robotica: number;
     electronica: number;
     herramientas: number;
   };
+}
+
+export type ShiftType = '06:00' | '12:00' | '18:00';
+
+export interface PhysicalInventorySchedule {
+  id: string;
+  environmentId: EnvironmentId;
+  environmentName: string;
+  instructorId: string;
+  instructorName: string;
+  instructorEmail: string;
+  date: string; // YYYY-MM-DD
+  shift: ShiftType;
+  shiftLabel: string;
+  deadlineTime: string; // e.g. "06:30 AM", "12:30 PM", "06:30 PM"
+  status: 'PENDIENTE' | 'COMPLETADA' | 'NO_REALIZADA';
+  totalItems: number;
+  verifiedCount: number;
+  missingCount: number;
+  completedAt?: string;
+  completedBy?: string;
+  notes?: string;
+  alertSent: boolean;
+  alertSentAt?: string;
+}
+
+export interface AdminEmailAlert {
+  id: string;
+  scheduleId: string;
+  environmentId: EnvironmentId;
+  environmentName: string;
+  instructorName: string;
+  instructorEmail: string;
+  adminEmail: string;
+  shift: ShiftType;
+  shiftLabel: string;
+  date: string;
+  scheduledTime: string;
+  deadlineTime: string;
+  subject: string;
+  body: string;
+  sentAt: string;
+  status: 'ENVIADO' | 'PENDIENTE';
 }
 
 export interface ProductCategory {

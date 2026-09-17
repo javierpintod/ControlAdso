@@ -7,7 +7,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => {
-  const { ticket, categories, assets } = useApp();
+  const { ticket, categories, assets, adminEmailAlerts } = useApp();
 
   const navItems = [
     {
@@ -44,7 +44,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
       id: 'auditoria',
       label: 'Toma Física / Auditoría',
       icon: 'assignment_turned_in',
-      badge: { count: '75%', color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-400/30' }
+      badge: adminEmailAlerts.length > 0 
+        ? { count: `${adminEmailAlerts.length} alerta${adminEmailAlerts.length > 1 ? 's' : ''}`, color: 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-400/30 animate-pulse' }
+        : { count: '6am•12m•6pm', color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-400/30' }
     },
     {
       id: 'escanear',

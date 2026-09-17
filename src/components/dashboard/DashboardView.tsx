@@ -11,6 +11,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     categories, 
     assets,
     movements, 
+    physicalSchedules,
+    adminEmailAlerts,
+    adminEmailAddress,
     activeEnvironmentTab, 
     setActiveEnvironmentTab, 
     openModal, 
@@ -250,6 +253,52 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           </div>
         </div>
 
+      </div>
+
+      {/* Institutional Physical Inventory Alert / Status Strip (6:00 AM • 12:00 M • 6:00 PM) */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-blue-50/80 via-white to-indigo-50/50 dark:from-blue-950/20 dark:via-slate-900 dark:to-indigo-950/20 border border-blue-200/80 dark:border-blue-900/40 shadow-xs flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+            <span className="material-symbols-outlined text-2xl">event_available</span>
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-headline font-bold text-sm sm:text-base text-slate-900 dark:text-white">
+                Toma Física Obligatoria por Ambientes
+              </span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono uppercase bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300">
+                6:00 AM • 12:00 M • 6:00 PM
+              </span>
+              {adminEmailAlerts.length > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-900 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
+                  {adminEmailAlerts.length} ALERTA{adminEmailAlerts.length > 1 ? 'S' : ''} AL ADMIN ({adminEmailAddress})
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Cada ambiente cuenta con un instructor asignado. Si el instructor no realiza la toma antes de la hora límite, el sistema despacha automáticamente una alerta por correo electrónico.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 w-full lg:w-auto justify-between lg:justify-end">
+          <div className="flex items-center gap-1.5 text-xs">
+            <div className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 font-mono text-slate-700 dark:text-slate-300">
+              <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                {physicalSchedules.filter(s => s.status === 'COMPLETADA').length}
+              </span>
+              <span className="text-slate-400">/{physicalSchedules.length} listas</span>
+            </div>
+          </div>
+          <button
+            onClick={() => onNavigate('auditoria')}
+            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-xs"
+          >
+            <span>Gestionar Tomas y Alertas</span>
+            <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+          </button>
+        </div>
       </div>
 
       {/* Segmented Environment Switcher / Tabs */}

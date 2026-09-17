@@ -12,7 +12,11 @@ import {
   AuditItem,
   ToastMessage,
   MovementType,
-  TicketResolutionType
+  TicketResolutionType,
+  Environment,
+  PhysicalInventorySchedule,
+  AdminEmailAlert,
+  ShiftType
 } from '../types';
 import { 
   INITIAL_ENVIRONMENTS, 
@@ -21,7 +25,9 @@ import {
   INITIAL_MOVEMENTS, 
   INITIAL_TICKET, 
   INITIAL_USERS, 
-  INITIAL_AUDIT_SESSION 
+  INITIAL_AUDIT_SESSION,
+  INITIAL_PHYSICAL_SCHEDULES,
+  INITIAL_ADMIN_EMAIL_ALERTS
 } from '../data/mockData';
 import { 
   RawInventoryRow, 
@@ -59,6 +65,11 @@ interface AppContextType {
   activeModal: string | null;
   selectedAsset: SerialAsset | null;
   voucherData: InventoryMovement | null;
+  environments: Environment[];
+  physicalSchedules: PhysicalInventorySchedule[];
+  adminEmailAlerts: AdminEmailAlert[];
+  adminEmailAddress: string;
+  setAdminEmailAddress: (email: string) => void;
   
   // Actions
   switchRole: (role: UserRole) => void;
@@ -70,6 +81,18 @@ interface AppContextType {
   openModal: (modalName: string, payload?: unknown) => void;
   closeModal: () => void;
   setSelectedAsset: (asset: SerialAsset | null) => void;
+  
+  // Instructors & Physical Inventory Shifts (6am, 12m, 6pm)
+  assignInstructorToEnvironment: (envId: EnvironmentId, instructorId: string) => void;
+  completePhysicalInventory: (
+    scheduleId: string, 
+    verifiedCount: number, 
+    notes?: string,
+    verifiedSerials?: string[]
+  ) => void;
+  markScheduleAsMissed: (scheduleId: string, customReason?: string) => void;
+  resendAdminEmailAlert: (alertId: string) => void;
+  executeAutoMissedCheck: () => void;
   
   // Operations with strict TRD business rules
   registerMovement: (input: RegisterMovementInput) => { success: boolean; error?: string };
@@ -216,6 +239,209 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem('controladso_movements', JSON.stringify(movements));
   }, [movements]);
+
+  // Ambientes con Instructores asignados
+  const [environments, setEnvironments] = useState<Environment[]>(() => {
+    const saved = localStorage.getItem('controladso_environments');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error parsing environments:', e);
+      }
+    }
+    return INITIAL_ENVIRONMENTS;
+  });
+
+  // Cronograma de Tomas Físicas Diarias (6:00 AM, 12:00 M, 6:00 PM)
+  const [physicalSchedules, setPhysicalSchedules] = useState<PhysicalInventorySchedule[]>(() => {
+    const saved = localStorage.getItem('controladso_schedules');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error parsing schedules:', e);
+      }
+    }
+    return INITIAL_PHYSICAL_SCHEDULES;
+  });
+
+  // Bandeja de Alertas de Correo al Administrador
+  const [adminEmailAlerts, setAdminEmailAlerts] = useState<AdminEmailAlert[]>(() => {
+    const saved = localStorage.getItem('controladso_email_alerts');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error parsing email alerts:', e);
+      }
+    }
+    return INITIAL_ADMIN_EMAIL_ALERTS;
+  });
+
+  const [adminEmailAddress, setAdminEmailAddressState] = useState<string>(() => {
+    return localStorage.getItem('controladso_admin_email') || 'javierpint@gmail.com';
+  });
+
+  const setAdminEmailAddress = (email: string) => {
+    setAdminEmailAddressState(email);
+    localStorage.setItem('controladso_admin_email', email);
+    showToast(`Correo del Administrador actualizado a: ${email}`, 'info', 'mail');
+  };
+
+  useEffect(() => {
+    localStorage.setItem('controladso_environments', JSON.stringify(environments));
+  }, [environments]);
+
+  useEffect(() => {
+    localStorage.setItem('controladso_schedules', JSON.stringify(physicalSchedules));
+  }, [physicalSchedules]);
+
+  useEffect(() => {
+    localStorage.setItem('controladso_email_alerts', JSON.stringify(adminEmailAlerts));
+  }, [adminEmailAlerts]);
+
+  // Asignación de Instructor a un Ambiente de Aprendizaje
+  const assignInstructorToEnvironment = (envId: EnvironmentId, instructorId: string) => {
+    const instructor = users.find(u => u.id === instructorId);
+    if (!instructor) {
+      showToast('Instructor no encontrado en la nómina.', 'error');
+      return;
+    }
+
+    setEnvironments(prev => prev.map(env => {
+      if (env.id === envId) {
+        return {
+          ...env,
+          assignedInstructorId: instructor.id,
+          assignedInstructorName: instructor.name,
+          assignedInstructorEmail: instructor.email
+        };
+      }
+      return env;
+    }));
+
+    // Actualizar jornadas pendientes vinculadas a este ambiente
+    setPhysicalSchedules(prev => prev.map(sched => {
+      if (sched.environmentId === envId && sched.status === 'PENDIENTE') {
+        return {
+          ...sched,
+          instructorId: instructor.id,
+          instructorName: instructor.name,
+          instructorEmail: instructor.email
+        };
+      }
+      return sched;
+    }));
+
+    showToast(`Instructor ${instructor.name} asignado al ambiente exitosamente.`, 'success', 'person_pin');
+  };
+
+  // Completar toma física en el horario asignado (6am, 12m, 6pm)
+  const completePhysicalInventory = (
+    scheduleId: string, 
+    verifiedCount: number, 
+    notes?: string,
+    verifiedSerials?: string[]
+  ) => {
+    const schedule = physicalSchedules.find(s => s.id === scheduleId);
+    if (!schedule) {
+      showToast('Turno de toma física no encontrado', 'error');
+      return;
+    }
+
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const missing = Math.max(0, schedule.totalItems - verifiedCount);
+
+    setPhysicalSchedules(prev => prev.map(s => {
+      if (s.id === scheduleId) {
+        return {
+          ...s,
+          status: 'COMPLETADA',
+          verifiedCount,
+          missingCount: missing,
+          completedAt: timeStr,
+          completedBy: currentUser.name || s.instructorName,
+          notes: notes || `Toma física presencial realizada a las ${timeStr} por ${currentUser.name || s.instructorName}. ${verifiedCount} activos cotejados en ambiente.`
+        };
+      }
+      return s;
+    }));
+
+    showToast(`¡Toma física certificada con éxito! ${verifiedCount}/${schedule.totalItems} activos cotejados.`, 'success', 'verified');
+  };
+
+  // Marcar toma física como NO REALIZADA y disparar correo automático al Administrador
+  const markScheduleAsMissed = (scheduleId: string, customReason?: string) => {
+    const schedule = physicalSchedules.find(s => s.id === scheduleId);
+    if (!schedule) return;
+
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateStr = now.toISOString().slice(0, 10);
+
+    // 1. Actualizar estado de la jornada a NO_REALIZADA
+    setPhysicalSchedules(prev => prev.map(s => {
+      if (s.id === scheduleId) {
+        return {
+          ...s,
+          status: 'NO_REALIZADA',
+          missingCount: s.totalItems,
+          alertSent: true,
+          alertSentAt: timeStr,
+          notes: customReason || `Incumplimiento de horario: Venció plazo a las ${s.deadlineTime} sin registro por parte del instructor responsable (${s.instructorName}).`
+        };
+      }
+      return s;
+    }));
+
+    // 2. Generar y registrar notificación por correo enviada al Administrador
+    const newAlert: AdminEmailAlert = {
+      id: `alt-email-${Date.now()}`,
+      scheduleId: schedule.id,
+      environmentId: schedule.environmentId,
+      environmentName: schedule.environmentName,
+      instructorName: schedule.instructorName,
+      instructorEmail: schedule.instructorEmail,
+      adminEmail: adminEmailAddress,
+      shift: schedule.shift,
+      shiftLabel: schedule.shiftLabel,
+      date: dateStr,
+      scheduledTime: schedule.shift === '06:00' ? '06:00 AM' : schedule.shift === '12:00' ? '12:00 M' : '06:00 PM',
+      deadlineTime: schedule.deadlineTime,
+      subject: `⚠️ [ALERTA INVENTARIO SENA] Incumplimiento de Toma Física - ${schedule.environmentName} (${schedule.shiftLabel})`,
+      body: `Señor Administrador (${adminEmailAddress}),\n\nLe notificamos de manera urgente que se ha cumplido la hora límite oficial (${schedule.deadlineTime}) y el instructor responsable asignado NO ha realizado la toma física de inventario requerida:\n\n• Ambiente de Aprendizaje: ${schedule.environmentName}\n• Instructor Asignado: ${schedule.instructorName} (${schedule.instructorEmail})\n• Jornada Reglamentaria: ${schedule.shiftLabel}\n• Tolerancia Límite: ${schedule.deadlineTime}\n• Total Bienes Bajo Custodia: ${schedule.totalItems} activos inventariados\n• Estado Actual: NO REALIZADA / VENCIDA\n\nAcción requerida: Notificar al instructor o comisionar verificación presencial para evitar pérdida o desubicación de activos.\n\nNotificación enviada automáticamente a: ${adminEmailAddress} y admin@sena.edu.co\nSistema de Control ADSO SENA.`,
+      sentAt: `Hoy a las ${timeStr}`,
+      status: 'ENVIADO'
+    };
+
+    setAdminEmailAlerts(prev => [newAlert, ...prev]);
+
+    showToast(`⚠️ Alerta enviada por correo al Administrador (${adminEmailAddress}) por toma no realizada.`, 'warning', 'forward_to_inbox');
+  };
+
+  const resendAdminEmailAlert = (alertId: string) => {
+    const alert = adminEmailAlerts.find(a => a.id === alertId);
+    if (!alert) return;
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    setAdminEmailAlerts(prev => prev.map(a => a.id === alertId ? { ...a, sentAt: `Re-enviado hoy a las ${timeStr}` } : a));
+    showToast(`Correo de alerta re-enviado exitosamente a: ${adminEmailAddress}`, 'success', 'mail');
+  };
+
+  const executeAutoMissedCheck = () => {
+    let count = 0;
+    physicalSchedules.forEach(s => {
+      if (s.status === 'PENDIENTE') {
+        markScheduleAsMissed(s.id, 'Verificación de corte horario: Jornada vencida sin toma física.');
+        count++;
+      }
+    });
+    if (count === 0) {
+      showToast('Todos los turnos del día están al día o ya procesados.', 'info', 'check_circle');
+    }
+  };
 
   const toggleTheme = () => {
     setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
@@ -827,6 +1053,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         activeModal,
         selectedAsset,
         voucherData,
+        environments,
+        physicalSchedules,
+        adminEmailAlerts,
+        adminEmailAddress,
+        setAdminEmailAddress,
         switchRole,
         setCampus,
         setActiveEnvironmentTab,
@@ -836,6 +1067,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         openModal,
         closeModal,
         setSelectedAsset,
+        assignInstructorToEnvironment,
+        completePhysicalInventory,
+        markScheduleAsMissed,
+        resendAdminEmailAlert,
+        executeAutoMissedCheck,
         registerMovement,
         verifyAssetInAudit,
         reportAuditDiscrepancy,
