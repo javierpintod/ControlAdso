@@ -32,18 +32,112 @@ export function formatDateToISO(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-const MONTH_NAMES_ES = [
+export interface CalendarDayCell {
+  date: string;            // 'YYYY-MM-DD'
+  dayNumber: number;      // 1..31
+  dayOfWeek: number;      // 0=Dom, 1=Lun, ..., 6=Sáb
+  dayName: string;        // 'Lunes', 'Martes', etc.
+  shortDay: string;       // 'Lun', 'Mar', etc.
+  isCurrentMonth: boolean;
+  isToday: boolean;
+  isSaturday: boolean;
+  isSunday: boolean;
+  formattedDate: string;
+}
+
+export const MONTH_NAMES_ES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ];
 
-const MONTH_SHORT_ES = [
+export const MONTH_SHORT_ES = [
   'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
   'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
 ];
 
-const DAY_NAMES_ES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-const DAY_SHORT_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+export const DAY_NAMES_ES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+export const DAY_SHORT_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+/**
+ * Returns full 7-column calendar cells (Monday to Sunday) for the given month and year.
+ */
+export function getMonthCalendarDays(year: number, month: number, todayStr: string = '2026-09-17'): CalendarDayCell[] {
+  const firstDay = new Date(year, month, 1, 12, 0, 0);
+  const lastDay = new Date(year, month + 1, 0, 12, 0, 0);
+
+  const startDayOfWeek = firstDay.getDay();
+  const leadingDaysCount = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
+
+  const cells: CalendarDayCell[] = [];
+
+  for (let i = leadingDaysCount; i > 0; i--) {
+    const d = new Date(year, month, 1 - i, 12, 0, 0);
+    const dateIso = formatDateToISO(d);
+    const dayOfWeek = d.getDay();
+    cells.push({
+      date: dateIso,
+      dayNumber: d.getDate(),
+      dayOfWeek,
+      dayName: DAY_NAMES_ES[dayOfWeek],
+      shortDay: DAY_SHORT_ES[dayOfWeek],
+      isCurrentMonth: false,
+      isToday: dateIso === todayStr,
+      isSaturday: dayOfWeek === 6,
+      isSunday: dayOfWeek === 0,
+      formattedDate: `${DAY_SHORT_ES[dayOfWeek]} ${d.getDate()} ${MONTH_SHORT_ES[d.getMonth()]}`
+    });
+  }
+
+  for (let day = 1; day <= lastDay.getDate(); day++) {
+    const d = new Date(year, month, day, 12, 0, 0);
+    const dateIso = formatDateToISO(d);
+    const dayOfWeek = d.getDay();
+    cells.push({
+      date: dateIso,
+      dayNumber: day,
+      dayOfWeek,
+      dayName: DAY_NAMES_ES[dayOfWeek],
+      shortDay: DAY_SHORT_ES[dayOfWeek],
+      isCurrentMonth: true,
+      isToday: dateIso === todayStr,
+      isSaturday: dayOfWeek === 6,
+      isSunday: dayOfWeek === 0,
+      formattedDate: `${DAY_SHORT_ES[dayOfWeek]} ${day} ${MONTH_SHORT_ES[month]}`
+    });
+  }
+
+  const remainingCells = 7 - (cells.length % 7);
+  if (remainingCells < 7) {
+    for (let i = 1; i <= remainingCells; i++) {
+      const d = new Date(year, month + 1, i, 12, 0, 0);
+      const dateIso = formatDateToISO(d);
+      const dayOfWeek = d.getDay();
+      cells.push({
+        date: dateIso,
+        dayNumber: i,
+        dayOfWeek,
+        dayName: DAY_NAMES_ES[dayOfWeek],
+        shortDay: DAY_SHORT_ES[dayOfWeek],
+        isCurrentMonth: false,
+        isToday: dateIso === todayStr,
+        isSaturday: dayOfWeek === 6,
+        isSunday: dayOfWeek === 0,
+        formattedDate: `${DAY_SHORT_ES[dayOfWeek]} ${i} ${MONTH_SHORT_ES[d.getMonth()]}`
+      });
+    }
+  }
+
+  return cells;
+}
+
+/**
+ * Shifts date by month delta
+ */
+export function shiftMonthDate(currentDateStr: string, monthsDelta: number): string {
+  const d = parseLocalDate(currentDateStr);
+  d.setMonth(d.getMonth() + monthsDelta);
+  return formatDateToISO(d);
+}
 
 /**
  * Returns Monday through Saturday for the week containing the given date.
