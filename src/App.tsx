@@ -15,6 +15,7 @@ import { ScannerView } from './components/scanner/ScannerView';
 import { UsersView } from './components/users/UsersView';
 import { ReportsView } from './components/reports/ReportsView';
 import { DatabaseView } from './components/database/DatabaseView';
+import { CustomizationView } from './components/customization/CustomizationView';
 
 // Modals
 import { MovementModal } from './components/modals/MovementModal';
@@ -53,6 +54,8 @@ const MainLayout: React.FC = () => {
         return <ReportsView onNavigate={setCurrentView} />;
       case 'database':
         return <DatabaseView onNavigate={setCurrentView} />;
+      case 'personalizacion':
+        return <CustomizationView onNavigate={setCurrentView} />;
       default:
         return <DashboardView onNavigate={setCurrentView} />;
     }

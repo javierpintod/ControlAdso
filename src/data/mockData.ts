@@ -7,9 +7,28 @@ import {
   AuditSession,
   Environment,
   PhysicalInventorySchedule,
-  AdminEmailAlert
+  AdminEmailAlert,
+  InstitutionProfile
 } from '../types';
 import { INITIAL_INSTITUTIONAL_ASSETS } from './institutionalAssets';
+
+export const DEFAULT_INSTITUTION_PROFILE: InstitutionProfile = {
+  name: 'SENA - Servicio Nacional de Aprendizaje',
+  shortName: 'SENA',
+  centerName: 'Centro de Servicios y Gestión Empresarial',
+  regional: 'Regional Antioquia',
+  nit: '899.999.034-1',
+  address: 'Calle 51 # 57-70, Torre Occidental',
+  city: 'Medellín, Colombia',
+  phone: '+57 (604) 576-0000',
+  email: 'contacto@sena.edu.co',
+  website: 'www.sena.edu.co',
+  slogan: 'Conocimiento y Oportunidad para Todos los Colombianos',
+  adminContact: 'Javier Pinto - Administrador de Inventarios',
+  systemName: 'EduStock',
+  systemSubtitle: 'Control Patrimonial y Toma Física por Ambientes',
+  logoIcon: 'inventory_2'
+};
 
 export const INITIAL_ENVIRONMENTS: Environment[] = [
   {

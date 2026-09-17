@@ -7,7 +7,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => {
-  const { ticket, categories, assets, adminEmailAlerts } = useApp();
+  const { ticket, categories, assets, adminEmailAlerts, institutionProfile } = useApp();
 
   const navItems = [
     {
@@ -15,6 +15,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
       label: 'Dashboard General',
       icon: 'dashboard',
       badge: null
+    },
+    {
+      id: 'personalizacion',
+      label: 'Personalización & Registros',
+      icon: 'tune',
+      badge: { count: 'Ajustes', color: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-400/30' }
     },
     {
       id: 'inventario',
@@ -83,15 +89,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
           className="h-16 px-6 flex items-center gap-3.5 border-b border-slate-100 dark:border-white/10 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
         >
           <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md">
-            <span className="material-symbols-outlined text-[24px]">inventory_2</span>
+            <span className="material-symbols-outlined text-[24px]">
+              {institutionProfile?.logoIcon || 'inventory_2'}
+            </span>
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="font-headline font-bold text-lg text-slate-900 dark:text-white leading-none tracking-tight">
-              EduStock
+            <span className="font-headline font-bold text-lg text-slate-900 dark:text-white leading-none tracking-tight truncate max-w-[170px]">
+              {institutionProfile?.systemName || 'EduStock'}
             </span>
-            <span className="text-[11px] font-medium text-slate-500 dark:text-cyan-300/80 mt-1 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-cyan-400"></span>
-              Inventario Ambientes
+            <span className="text-[11px] font-medium text-slate-500 dark:text-cyan-300/80 mt-1 flex items-center gap-1.5 truncate max-w-[170px]">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-cyan-400 shrink-0"></span>
+              <span className="truncate">{institutionProfile?.shortName || 'SENA'} • Ambientes</span>
             </span>
           </div>
         </div>

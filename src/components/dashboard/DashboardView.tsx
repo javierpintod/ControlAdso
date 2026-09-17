@@ -11,6 +11,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     categories, 
     assets,
     movements, 
+    environments,
+    institutionProfile,
     physicalSchedules,
     adminEmailAlerts,
     adminEmailAddress,
@@ -32,9 +34,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
   const envTabs: { id: EnvironmentId; label: string; count: number; icon: string }[] = [
     { id: 'all', label: 'Todos los Ambientes', count: assets.length, icon: 'domain' },
-    { id: 'amb1', label: 'Ambiente 1: Lab Robótica & IA', count: assets.filter(a => a.environmentId === 'amb1').length, icon: 'precision_manufacturing' },
-    { id: 'amb2', label: 'Ambiente 2: Aula Cómputo & Redes', count: assets.filter(a => a.environmentId === 'amb2').length, icon: 'lan' },
-    { id: 'amb3', label: 'Ambiente 3: Taller de Electrónica', count: assets.filter(a => a.environmentId === 'amb3').length, icon: 'memory' },
+    ...environments.map(env => ({
+      id: env.id as EnvironmentId,
+      label: env.name,
+      count: assets.filter(a => a.environmentId === env.id).length,
+      icon: env.icon || 'meeting_room'
+    })),
     { id: 'service', label: 'Mesa de Servicio', count: assets.filter(a => a.environmentId === 'service').length, icon: 'support_agent' },
     { id: 'damaged', label: 'Almacén de Dañados', count: assets.filter(a => a.environmentId === 'damaged').length, icon: 'warning' }
   ];
@@ -122,6 +127,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           >
             <span className="material-symbols-outlined text-[17px]">sync_alt</span>
             <span>Registrar Movimiento</span>
+          </button>
+
+          {/* Customization Quick Button */}
+          <button
+            onClick={() => onNavigate('personalizacion')}
+            type="button"
+            className="inline-flex items-center gap-2 px-3.5 py-2 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-500/30 text-indigo-700 dark:text-indigo-300 font-semibold text-xs rounded-xl shadow-xs hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all"
+            title="Personalizar Institución, Ambientes y Registros"
+          >
+            <span className="material-symbols-outlined text-[17px]">tune</span>
+            <span>Personalizar</span>
           </button>
 
           {/* New Product Button */}

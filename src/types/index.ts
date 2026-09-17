@@ -1,6 +1,24 @@
 export type UserRole = 'admin' | 'consulta' | 'tecnico';
 
-export type EnvironmentId = 'all' | 'amb1' | 'amb2' | 'amb3' | 'service' | 'damaged' | 'unassigned';
+export type EnvironmentId = 'all' | 'amb1' | 'amb2' | 'amb3' | 'service' | 'damaged' | 'unassigned' | (string & {});
+
+export interface InstitutionProfile {
+  name: string;             // e.g. "SENA - Servicio Nacional de Aprendizaje"
+  shortName: string;        // e.g. "SENA"
+  centerName: string;       // e.g. "Centro de Servicios y Gestión Empresarial"
+  regional: string;         // e.g. "Regional Antioquia"
+  nit: string;              // e.g. "899.999.034-1"
+  address: string;          // e.g. "Calle 51 # 57-70"
+  city: string;             // e.g. "Medellín, Colombia"
+  phone: string;            // e.g. "+57 (604) 576-0000"
+  email: string;            // e.g. "contacto@sena.edu.co"
+  website: string;          // e.g. "www.sena.edu.co"
+  slogan: string;           // e.g. "Conocimiento y Oportunidad para Todos los Colombianos"
+  adminContact: string;     // e.g. "Javier Pinto - Administrador de Inventarios"
+  systemName: string;       // e.g. "EduStock"
+  systemSubtitle: string;   // e.g. "Sistema de Gestión y Control Físico de Inventarios"
+  logoIcon: string;         // e.g. "account_balance"
+}
 
 export type CampusId = 'central' | 'norte' | 'sur';
 

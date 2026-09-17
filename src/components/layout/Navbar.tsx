@@ -15,7 +15,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
     theme, 
     toggleTheme, 
     openModal, 
-    showToast 
+    showToast,
+    institutionProfile
   } = useApp();
 
   return (
@@ -28,10 +29,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
           className="lg:hidden flex items-center gap-2 cursor-pointer shrink-0"
         >
           <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-sm">
-            <span className="material-symbols-outlined text-[20px]">inventory_2</span>
+            <span className="material-symbols-outlined text-[20px]">{institutionProfile?.logoIcon || 'inventory_2'}</span>
           </div>
-          <span className="font-headline font-bold text-sm tracking-tight text-slate-900 dark:text-white hidden xs:inline">
-            EduStock
+          <span className="font-headline font-bold text-sm tracking-tight text-slate-900 dark:text-white hidden xs:inline truncate max-w-[130px]">
+            {institutionProfile?.systemName || 'EduStock'}
           </span>
         </div>
 
@@ -96,6 +97,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
             <span>Consulta</span>
           </button>
         </div>
+
+        {/* Personalización y Configuración Quick Shortcut */}
+        <button
+          onClick={() => onNavigate('personalizacion')}
+          className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-500/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-xs font-semibold transition-all active:scale-95"
+          title="Personalizar Institución, Ambientes y Registros"
+        >
+          <span className="material-symbols-outlined text-[16px]">tune</span>
+          <span>Personalizar</span>
+        </button>
 
         {/* Supabase Database Quick Shortcut */}
         <button

@@ -16,7 +16,8 @@ import {
   Environment,
   PhysicalInventorySchedule,
   AdminEmailAlert,
-  ShiftType
+  ShiftType,
+  InstitutionProfile
 } from '../types';
 import { 
   INITIAL_ENVIRONMENTS, 
@@ -27,7 +28,8 @@ import {
   INITIAL_USERS, 
   INITIAL_AUDIT_SESSION,
   INITIAL_PHYSICAL_SCHEDULES,
-  INITIAL_ADMIN_EMAIL_ALERTS
+  INITIAL_ADMIN_EMAIL_ALERTS,
+  DEFAULT_INSTITUTION_PROFILE
 } from '../data/mockData';
 import { 
   RawInventoryRow, 
@@ -70,6 +72,46 @@ interface AppContextType {
   adminEmailAlerts: AdminEmailAlert[];
   adminEmailAddress: string;
   setAdminEmailAddress: (email: string) => void;
+  
+  // Customization & Institution Profile
+  institutionProfile: InstitutionProfile;
+  updateInstitutionProfile: (profile: Partial<InstitutionProfile>) => void;
+  resetInstitutionProfile: () => void;
+
+  // Environment Customization & CRUD
+  updateEnvironment: (envId: string, data: Partial<Environment>) => void;
+  createEnvironment: (newEnv: {
+    id?: string;
+    name: string;
+    codeName: string;
+    building: string;
+    floor: string;
+    icon: string;
+    totalCapacity: number;
+    assignedInstructorId?: string;
+    assignedInstructorName?: string;
+    assignedInstructorEmail?: string;
+  }) => void;
+  deleteEnvironment: (envId: string) => void;
+
+  // Customization of Any Records (Assets, Categories, Users, Movements)
+  updateAsset: (assetId: string, data: Partial<SerialAsset>) => void;
+  createAsset: (assetData: Partial<SerialAsset>) => void;
+  deleteAsset: (assetId: string) => void;
+  
+  updateCategory: (categoryId: string, data: Partial<ProductCategory>) => void;
+  createCategory: (catData: Partial<ProductCategory>) => void;
+  deleteCategory: (categoryId: string) => void;
+
+  updateUser: (userId: string, data: Partial<User>) => void;
+
+  updateMovement: (movementId: string, data: Partial<InventoryMovement>) => void;
+  deleteMovement: (movementId: string) => void;
+
+  // Backup, Restore & Reset
+  exportEntireBackupJson: () => string;
+  importEntireBackupJson: (jsonData: string) => { success: boolean; message: string };
+  resetAllDataToFactory: () => void;
   
   // Actions
   switchRole: (role: UserRole) => void;
@@ -300,6 +342,387 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem('controladso_email_alerts', JSON.stringify(adminEmailAlerts));
   }, [adminEmailAlerts]);
+
+  // Perfil Institucional Personalizable
+  const [institutionProfile, setInstitutionProfile] = useState<InstitutionProfile>(() => {
+    const saved = localStorage.getItem('controladso_institution_profile');
+    if (saved) {
+      try {
+        return { ...DEFAULT_INSTITUTION_PROFILE, ...JSON.parse(saved) };
+      } catch (e) {
+        console.error('Error parsing institution profile:', e);
+      }
+    }
+    return DEFAULT_INSTITUTION_PROFILE;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('controladso_institution_profile', JSON.stringify(institutionProfile));
+  }, [institutionProfile]);
+
+  const updateInstitutionProfile = (profileData: Partial<InstitutionProfile>) => {
+    setInstitutionProfile(prev => ({ ...prev, ...profileData }));
+    showToast('Perfil institucional actualizado correctamente', 'success', 'account_balance');
+  };
+
+  const resetInstitutionProfile = () => {
+    setInstitutionProfile(DEFAULT_INSTITUTION_PROFILE);
+    localStorage.removeItem('controladso_institution_profile');
+    showToast('Institución restablecida a valores por defecto (SENA)', 'info', 'restart_alt');
+  };
+
+  // Personalización y CRUD de Ambientes
+  const updateEnvironment = (envId: string, data: Partial<Environment>) => {
+    setEnvironments(prev => prev.map(env => {
+      if (env.id === envId) {
+        return { ...env, ...data };
+      }
+      return env;
+    }));
+
+    // Sincronizar el nombre si cambió
+    if (data.name) {
+      setAssets(prev => prev.map(asset => {
+        if (asset.environmentId === envId) {
+          return { ...asset, environmentName: data.name! };
+        }
+        return asset;
+      }));
+
+      setPhysicalSchedules(prev => prev.map(sch => {
+        if (sch.environmentId === envId) {
+          return { ...sch, environmentName: data.name! };
+        }
+        return sch;
+      }));
+
+      setAdminEmailAlerts(prev => prev.map(alt => {
+        if (alt.environmentId === envId) {
+          return { ...alt, environmentName: data.name! };
+        }
+        return alt;
+      }));
+
+      setAuditSession(prev => {
+        if (prev.environmentId === envId) {
+          return { ...prev, environmentName: data.name! };
+        }
+        return prev;
+      });
+    }
+
+    showToast(`Ambiente "${data.name || envId}" actualizado correctamente`, 'success', 'meeting_room');
+  };
+
+  const createEnvironment = (newEnvData: {
+    id?: string;
+    name: string;
+    codeName: string;
+    building: string;
+    floor: string;
+    icon: string;
+    totalCapacity: number;
+    assignedInstructorId?: string;
+    assignedInstructorName?: string;
+    assignedInstructorEmail?: string;
+  }) => {
+    const rawId = newEnvData.id || `amb-${Date.now().toString(36)}`;
+    const sanitizedId = rawId.toLowerCase().replace(/\s+/g, '-');
+    
+    // Check if ID exists
+    if (environments.some(e => e.id === sanitizedId)) {
+      showToast('Ya existe un ambiente con ese código identificador.', 'error');
+      return;
+    }
+
+    const created: Environment = {
+      id: sanitizedId,
+      name: newEnvData.name,
+      codeName: newEnvData.codeName || newEnvData.name,
+      building: newEnvData.building || 'Edificio Principal',
+      floor: newEnvData.floor || 'Piso 1',
+      icon: newEnvData.icon || 'meeting_room',
+      totalCapacity: Number(newEnvData.totalCapacity) || 20,
+      assignedCount: 0,
+      occupancyPercentage: 0,
+      assignedInstructorId: newEnvData.assignedInstructorId,
+      assignedInstructorName: newEnvData.assignedInstructorName,
+      assignedInstructorEmail: newEnvData.assignedInstructorEmail,
+      categoryBreakdown: { computo: 0, robotica: 0, electronica: 0, herramientas: 0 }
+    };
+
+    setEnvironments(prev => [...prev, created]);
+
+    // Generar automáticamente las 3 jornadas de toma física para el ambiente
+    const today = new Date().toISOString().split('T')[0];
+    const newSchedules: PhysicalInventorySchedule[] = [
+      {
+        id: `sch-${created.id}-0600-${Date.now()}`,
+        environmentId: created.id,
+        environmentName: created.name,
+        instructorId: created.assignedInstructorId || 'usr-inst-1',
+        instructorName: created.assignedInstructorName || 'Sin Asignar',
+        instructorEmail: created.assignedInstructorEmail || 'instructor@sena.edu.co',
+        date: today,
+        shift: '06:00',
+        shiftLabel: 'Turno Mañana (06:00 AM)',
+        deadlineTime: '06:30 AM',
+        status: 'PENDIENTE',
+        totalItems: 0,
+        verifiedCount: 0,
+        missingCount: 0,
+        alertSent: false
+      },
+      {
+        id: `sch-${created.id}-1200-${Date.now()}`,
+        environmentId: created.id,
+        environmentName: created.name,
+        instructorId: created.assignedInstructorId || 'usr-inst-1',
+        instructorName: created.assignedInstructorName || 'Sin Asignar',
+        instructorEmail: created.assignedInstructorEmail || 'instructor@sena.edu.co',
+        date: today,
+        shift: '12:00',
+        shiftLabel: 'Turno Medio Día (12:00 M)',
+        deadlineTime: '12:30 PM',
+        status: 'PENDIENTE',
+        totalItems: 0,
+        verifiedCount: 0,
+        missingCount: 0,
+        alertSent: false
+      },
+      {
+        id: `sch-${created.id}-1800-${Date.now()}`,
+        environmentId: created.id,
+        environmentName: created.name,
+        instructorId: created.assignedInstructorId || 'usr-inst-1',
+        instructorName: created.assignedInstructorName || 'Sin Asignar',
+        instructorEmail: created.assignedInstructorEmail || 'instructor@sena.edu.co',
+        date: today,
+        shift: '18:00',
+        shiftLabel: 'Turno Tarde/Noche (06:00 PM)',
+        deadlineTime: '06:30 PM',
+        status: 'PENDIENTE',
+        totalItems: 0,
+        verifiedCount: 0,
+        missingCount: 0,
+        alertSent: false
+      }
+    ];
+
+    setPhysicalSchedules(prev => [...prev, ...newSchedules]);
+    showToast(`Ambiente "${created.name}" creado con éxito`, 'success', 'domain_add');
+  };
+
+  const deleteEnvironment = (envId: string) => {
+    const envToDelete = environments.find(e => e.id === envId);
+    if (!envToDelete) return;
+
+    // Desvincular activos para no perderlos
+    setAssets(prev => prev.map(a => a.environmentId === envId ? { ...a, environmentId: 'unassigned', environmentName: 'Sin Asignar (Reubicación)' } : a));
+    setEnvironments(prev => prev.filter(e => e.id !== envId));
+    setPhysicalSchedules(prev => prev.filter(s => s.environmentId !== envId));
+    setAdminEmailAlerts(prev => prev.filter(a => a.environmentId !== envId));
+
+    showToast(`Ambiente "${envToDelete.name}" eliminado correctamente`, 'warning', 'delete');
+  };
+
+  // Personalización de Activos / Bienes (Cualquier Registro)
+  const updateAsset = (assetId: string, data: Partial<SerialAsset>) => {
+    setAssets(prev => prev.map(a => {
+      if (a.id === assetId) {
+        const updated = { ...a, ...data };
+        if (data.environmentId) {
+          const targetEnv = environments.find(e => e.id === data.environmentId);
+          if (targetEnv) {
+            updated.environmentName = targetEnv.name;
+          }
+        }
+        return updated;
+      }
+      return a;
+    }));
+
+    if (selectedAsset?.id === assetId) {
+      setSelectedAsset(prev => prev ? { ...prev, ...data } : null);
+    }
+
+    showToast(`Activo guardado con éxito`, 'success', 'edit');
+  };
+
+  const createAsset = (assetData: Partial<SerialAsset>) => {
+    const env = environments.find(e => e.id === assetData.environmentId) || environments[0];
+    const newId = `asset-custom-${Date.now()}`;
+    const generatedSerial = assetData.serialNumber || assetData.serial || `SN-${Date.now().toString().slice(-6)}`;
+    const generatedPlaca = assetData.assetCode || assetData.placa || `PL-${Date.now().toString().slice(-6)}`;
+
+    const newAsset: SerialAsset = {
+      id: newId,
+      serialNumber: generatedSerial,
+      assetCode: generatedPlaca,
+      name: assetData.name || 'Activo Institucional Personalizado',
+      description: assetData.description || 'Bien registrado manualmente en el inventario',
+      category: assetData.category || 'computo',
+      environmentId: env ? env.id : 'amb1',
+      environmentName: env ? env.name : 'Ambiente 1',
+      station: assetData.station || 'Puesto General',
+      physicalStatus: assetData.physicalStatus || 'operativo',
+      statusLabel: assetData.physicalStatus === 'operativo' ? 'Operativo' : 'En Verificación',
+      responsiblePerson: assetData.responsiblePerson || 'Almacén Institucional',
+      assignedDate: assetData.assignedDate || new Date().toISOString().split('T')[0],
+      warrantyUntil: assetData.warrantyUntil || '2028-12-31',
+      barcode: assetData.barcode || `BC-${generatedPlaca}`,
+      qrToken: assetData.qrToken || `QR-${generatedPlaca}`,
+      specs: assetData.specs || { notes: 'Creado desde el módulo de personalización' },
+      photoUrl: assetData.photoUrl || 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&q=80&w=600',
+      placa: generatedPlaca,
+      serial: generatedSerial,
+      modelo: assetData.modelo || assetData.name || 'Modelo Personalizado',
+      descripcionActual: assetData.descripcionActual || assetData.description || 'Ficha técnica y características del bien',
+      valorIngreso: assetData.valorIngreso || '$ 1.200.000,00',
+      fechaAdquisicion: assetData.fechaAdquisicion || new Date().toISOString().split('T')[0],
+      centroCosto: assetData.centroCosto || '952710',
+      regional: assetData.regional || '41',
+      consecutivo: assetData.consecutivo || Date.now().toString().slice(-6),
+      historyTimeline: [
+        {
+          id: `h-${Date.now()}`,
+          title: 'Registro Inicial en Sistema',
+          date: new Date().toLocaleDateString('es-CO'),
+          time: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
+          description: 'Activo creado desde el módulo de personalización y administración.',
+          author: currentUser.name,
+          type: 'registration'
+        }
+      ],
+      ...assetData
+    };
+
+    setAssets(prev => [newAsset, ...prev]);
+    showToast(`Activo "${newAsset.name}" registrado`, 'success', 'add_circle');
+  };
+
+  const deleteAsset = (assetId: string) => {
+    const asset = assets.find(a => a.id === assetId);
+    setAssets(prev => prev.filter(a => a.id !== assetId));
+    if (selectedAsset?.id === assetId) {
+      setSelectedAsset(null);
+    }
+    showToast(`Activo "${asset?.name || assetId}" eliminado del registro`, 'warning', 'delete');
+  };
+
+  // Personalización de Categorías
+  const updateCategory = (categoryId: string, data: Partial<ProductCategory>) => {
+    setCategories(prev => prev.map(c => c.id === categoryId ? { ...c, ...data } : c));
+    showToast(`Categoría actualizada`, 'success', 'category');
+  };
+
+  const createCategory = (catData: Partial<ProductCategory>) => {
+    const newCat: ProductCategory = {
+      id: catData.id || `cat-${Date.now().toString(36)}`,
+      code: catData.code || `CAT-${Date.now().toString().slice(-4)}`,
+      name: catData.name || 'Nueva Categoría',
+      description: catData.description || 'Descripción de categoría',
+      icon: catData.icon || 'devices_other',
+      amb1: 0,
+      amb2: 0,
+      amb3: 0,
+      mesa: 0,
+      dano: 0,
+      total: 0,
+      operationalPercentage: 100,
+      status: 'ok',
+      ...catData
+    };
+    setCategories(prev => [...prev, newCat]);
+    showToast(`Categoría "${newCat.name}" creada`, 'success', 'add');
+  };
+
+  const deleteCategory = (categoryId: string) => {
+    setCategories(prev => prev.filter(c => c.id !== categoryId));
+    showToast('Categoría eliminada', 'warning', 'delete');
+  };
+
+  // Personalización de Usuarios / Instructores
+  const updateUser = (userId: string, data: Partial<User>) => {
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...data } : u));
+    if (currentUser.id === userId) {
+      setCurrentUser(prev => ({ ...prev, ...data }));
+    }
+    if (data.name) {
+      setEnvironments(prev => prev.map(env => {
+        if (env.assignedInstructorId === userId) {
+          return { ...env, assignedInstructorName: data.name! };
+        }
+        return env;
+      }));
+    }
+    showToast(`Usuario actualizado`, 'success', 'person');
+  };
+
+  // Personalización de Movimientos
+  const updateMovement = (movementId: string, data: Partial<InventoryMovement>) => {
+    setMovements(prev => prev.map(m => m.id === movementId ? { ...m, ...data } : m));
+    showToast(`Movimiento actualizado`, 'success', 'history_edu');
+  };
+
+  const deleteMovement = (movementId: string) => {
+    setMovements(prev => prev.filter(m => m.id !== movementId));
+    showToast('Registro de movimiento eliminado', 'warning', 'delete');
+  };
+
+  // Backup, Restauración y Restablecimiento Completo
+  const exportEntireBackupJson = () => {
+    const fullBackup = {
+      system: 'EduStock_Customization_Backup',
+      version: '2.0.0',
+      exportedAt: new Date().toISOString(),
+      institutionProfile,
+      environments,
+      categories,
+      assets,
+      users,
+      movements,
+      physicalSchedules,
+      adminEmailAlerts,
+      adminEmailAddress
+    };
+    return JSON.stringify(fullBackup, null, 2);
+  };
+
+  const importEntireBackupJson = (jsonData: string) => {
+    try {
+      const data = JSON.parse(jsonData);
+      if (data.institutionProfile) setInstitutionProfile(data.institutionProfile);
+      if (Array.isArray(data.environments)) setEnvironments(data.environments);
+      if (Array.isArray(data.categories)) setCategories(data.categories);
+      if (Array.isArray(data.assets)) setAssets(data.assets);
+      if (Array.isArray(data.users)) setUsers(data.users);
+      if (Array.isArray(data.movements)) setMovements(data.movements);
+      if (Array.isArray(data.physicalSchedules)) setPhysicalSchedules(data.physicalSchedules);
+      if (Array.isArray(data.adminEmailAlerts)) setAdminEmailAlerts(data.adminEmailAlerts);
+      if (data.adminEmailAddress) setAdminEmailAddressState(data.adminEmailAddress);
+      showToast('Copia de respaldo restaurada exitosamente', 'success', 'cloud_done');
+      return { success: true, message: 'Todos los registros y configuraciones fueron restaurados con éxito.' };
+    } catch (err) {
+      console.error('Error importing backup:', err);
+      showToast('El archivo JSON no tiene un formato válido.', 'error', 'error');
+      return { success: false, message: 'El archivo JSON no tiene un formato válido.' };
+    }
+  };
+
+  const resetAllDataToFactory = () => {
+    localStorage.clear();
+    setInstitutionProfile(DEFAULT_INSTITUTION_PROFILE);
+    setEnvironments(INITIAL_ENVIRONMENTS);
+    setCategories(INITIAL_CATEGORIES);
+    setAssets(INITIAL_ASSETS);
+    setUsers(INITIAL_USERS);
+    setMovements(INITIAL_MOVEMENTS);
+    setPhysicalSchedules(INITIAL_PHYSICAL_SCHEDULES);
+    setAdminEmailAlerts(INITIAL_ADMIN_EMAIL_ALERTS);
+    setAdminEmailAddressState('javierpint@gmail.com');
+    showToast('Sistema restablecido a los valores originales (SENA)', 'info', 'restore');
+  };
 
   // Asignación de Instructor a un Ambiente de Aprendizaje
   const assignInstructorToEnvironment = (envId: EnvironmentId, instructorId: string) => {
@@ -1058,6 +1481,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         adminEmailAlerts,
         adminEmailAddress,
         setAdminEmailAddress,
+        institutionProfile,
+        updateInstitutionProfile,
+        resetInstitutionProfile,
+        updateEnvironment,
+        createEnvironment,
+        deleteEnvironment,
+        updateAsset,
+        createAsset,
+        deleteAsset,
+        updateCategory,
+        createCategory,
+        deleteCategory,
+        updateUser,
+        updateMovement,
+        deleteMovement,
+        exportEntireBackupJson,
+        importEntireBackupJson,
+        resetAllDataToFactory,
         switchRole,
         setCampus,
         setActiveEnvironmentTab,
