@@ -23,7 +23,11 @@ import {
   INITIAL_USERS, 
   INITIAL_AUDIT_SESSION 
 } from '../data/mockData';
-import { RawInventoryRow, convertRawRowToSerialAsset } from '../data/institutionalAssets';
+import { 
+  RawInventoryRow, 
+  convertRawRowToSerialAsset,
+  INITIAL_INSTITUTIONAL_ASSETS 
+} from '../data/institutionalAssets';
 
 interface RegisterMovementInput {
   type: MovementType;
@@ -123,36 +127,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Active Environment Filter
   const [activeEnvironmentTab, setActiveEnvironmentTab] = useState<EnvironmentId>('all');
 
-  // Business Entities
+  // Business Entities con control de versión de datos institucionales SENA
+  const DATA_VERSION = 'sena_institutional_v3';
+
   const [categories, setCategories] = useState<ProductCategory[]>(() => {
-    const saved = localStorage.getItem('controladso_categories');
-    return saved ? JSON.parse(saved) : INITIAL_CATEGORIES;
+    const savedVer = localStorage.getItem('controladso_data_version');
+    if (savedVer === DATA_VERSION) {
+      const saved = localStorage.getItem('controladso_categories');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error('Error parsing categories:', e);
+        }
+      }
+    }
+    return INITIAL_CATEGORIES;
   });
 
   const [assets, setAssets] = useState<SerialAsset[]>(() => {
-    const saved = localStorage.getItem('controladso_assets');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length >= INITIAL_ASSETS.length) {
-          return parsed;
+    const savedVer = localStorage.getItem('controladso_data_version');
+    if (savedVer === DATA_VERSION) {
+      const saved = localStorage.getItem('controladso_assets');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            // Filtrar estrictamente cualquier activo mock previo (EDU-ACT)
+            const cleanList = parsed.filter(a => !a.assetCode?.startsWith('EDU-'));
+            if (cleanList.length > 0) {
+              return cleanList;
+            }
+          }
+        } catch (e) {
+          console.error('Error loading stored assets:', e);
         }
-        // Si hay una versión anterior con menos activos, incorporamos los nuevos activos institucionales
-        if (Array.isArray(parsed)) {
-          const existingCodes = new Set(parsed.map(p => p.assetCode || p.serialNumber));
-          const additions = INITIAL_ASSETS.filter(a => !existingCodes.has(a.assetCode) && !existingCodes.has(a.serialNumber));
-          return [...parsed, ...additions];
-        }
-      } catch (e) {
-        console.error('Error loading stored assets:', e);
       }
     }
-    return INITIAL_ASSETS;
+    // Inicializar directamente con la totalidad de los registros institucionales del SENA
+    localStorage.setItem('controladso_data_version', DATA_VERSION);
+    return INITIAL_INSTITUTIONAL_ASSETS;
   });
 
   const [movements, setMovements] = useState<InventoryMovement[]>(() => {
-    const saved = localStorage.getItem('controladso_movements');
-    return saved ? JSON.parse(saved) : INITIAL_MOVEMENTS;
+    const savedVer = localStorage.getItem('controladso_data_version');
+    if (savedVer === DATA_VERSION) {
+      const saved = localStorage.getItem('controladso_movements');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error('Error parsing movements:', e);
+        }
+      }
+    }
+    return INITIAL_MOVEMENTS;
   });
 
   const [ticket, setTicket] = useState<ServiceDeskTicket>(INITIAL_TICKET);

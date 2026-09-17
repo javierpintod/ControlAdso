@@ -182,27 +182,32 @@ export const InventorySerialView: React.FC<InventorySerialViewProps> = ({ onNavi
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/70 border border-slate-200/80 dark:border-white/10 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Total Serializados</span>
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Total Activos SENA</span>
             <span className="material-symbols-outlined text-[20px] text-blue-600 dark:text-cyan-400">qr_code_2</span>
           </div>
           <div className="my-2">
-            <span className="font-headline text-2xl font-bold text-slate-900 dark:text-white">1,482</span>
+            <span className="font-headline text-2xl font-bold text-slate-900 dark:text-white">{assets.length}</span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
-            <span>+12 nuevos este ciclo</span>
+            <span>{assets.filter(a => a.environmentId !== 'unassigned').length} asignados a ambientes</span>
           </div>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/70 border border-slate-200/80 dark:border-white/10 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Operativos en Aula</span>
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Operativos en Ambiente</span>
             <span className="material-symbols-outlined text-[20px] text-emerald-500">check_circle</span>
           </div>
           <div className="my-2">
-            <span className="font-headline text-2xl font-bold text-emerald-600 dark:text-emerald-400">1,421</span>
+            <span className="font-headline text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+              {assets.filter(a => a.physicalStatus === 'operativo').length}
+            </span>
           </div>
           <div className="w-full bg-slate-100 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
-            <div className="bg-emerald-500 h-full w-[95.8%] rounded-full"></div>
+            <div 
+              className="bg-emerald-500 h-full rounded-full transition-all"
+              style={{ width: `${assets.length > 0 ? (assets.filter(a => a.physicalStatus === 'operativo').length / assets.length) * 100 : 0}%` }}
+            ></div>
           </div>
         </div>
 
@@ -212,21 +217,25 @@ export const InventorySerialView: React.FC<InventorySerialViewProps> = ({ onNavi
             <span className="material-symbols-outlined text-[20px] text-blue-500">support_agent</span>
           </div>
           <div className="my-2">
-            <span className="font-headline text-2xl font-bold text-blue-600 dark:text-blue-400">43</span>
+            <span className="font-headline text-2xl font-bold text-blue-600 dark:text-blue-400">
+              {assets.filter(a => a.physicalStatus === 'mesa_servicio').length}
+            </span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-medium">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span>
-            <span>8 en cola diagnóstico</span>
+            <span>Mesa de diagnóstico activo</span>
           </div>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/70 border border-slate-200/80 dark:border-white/10 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Con Daño Crítico</span>
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Con Daño Físico / Baja</span>
             <span className="material-symbols-outlined text-[20px] text-rose-500">report_problem</span>
           </div>
           <div className="my-2">
-            <span className="font-headline text-2xl font-bold text-rose-600 dark:text-rose-400">18</span>
+            <span className="font-headline text-2xl font-bold text-rose-600 dark:text-rose-400">
+              {assets.filter(a => a.physicalStatus === 'con_dano').length}
+            </span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-rose-600 font-semibold">
             <span>En Almacén de Daño</span>

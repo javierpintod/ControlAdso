@@ -11,8 +11,8 @@ export const MovementModal: React.FC = () => {
   const [originEnv, setOriginEnv] = useState<EnvironmentId>('amb1');
   const [destEnv, setDestEnv] = useState<EnvironmentId>('amb2');
   const [quantity, setQuantity] = useState<number>(1);
-  const [serialNumber, setSerialNumber] = useState<string>('SN-8842-LAP');
-  const [notes, setNotes] = useState<string>('Reubicación Curricular - Taller de Programación Avanzada 2025-1');
+  const [serialNumber, setSerialNumber] = useState<string>(assets[0]?.serial || assets[0]?.serialNumber || '');
+  const [notes, setNotes] = useState<string>('Reasignación de activo institucional SENA');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (activeModal !== 'movement') return null;

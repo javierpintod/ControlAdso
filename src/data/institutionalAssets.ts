@@ -119,80 +119,155 @@ export function convertRawRowToSerialAsset(
   const modelClean = row.modelo && row.modelo !== '.' && row.modelo !== 'N/A' ? row.modelo : '';
   const fullName = modelClean ? `${row.descripcion} ${modelClean}` : row.descripcion;
   
-  // Asignación inteligente por defecto o permitir que el usuario asigne
-  let envId: EnvironmentId = defaultEnvId || 'unassigned';
-  let envName = 'Sin Asignar (Pendiente Reubicación)';
-  let station = 'Depósito General de Inventario';
-  let responsible = 'Por asignar en ambiente';
-
-  if (!defaultEnvId) {
-    // Si no se fuerza un ambiente, distribuimos lógicamente algunos para la demo y dejamos otros pendientes
-    if (row.descripcion.includes('PORTATIL') || row.modelo.includes('PROBOOK')) {
-      if (index % 3 === 0) {
-        envId = 'amb1';
-        envName = 'Ambiente 1: Lab Robótica e IA';
-        station = `Estación Móvil IA #${(index % 12) + 1}`;
-        responsible = 'Ing. Lucía Vargas Méndez';
-      } else if (index % 3 === 1) {
-        envId = 'amb2';
-        envName = 'Ambiente 2: Aula Cómputo & Redes';
-        station = `Puesto Alumno #${(index % 25) + 1}`;
-        responsible = 'Prof. Carlos Mendoza';
-      } else {
-        envId = 'unassigned';
-      }
-    } else if (row.descripcion.includes('CPU INTEGRADA') || row.modelo.includes('OPTIPLEX') || row.modelo.includes('PRO ONE')) {
-      if (index % 2 === 0) {
-        envId = 'amb2';
-        envName = 'Ambiente 2: Aula Cómputo & Redes';
-        station = `Puesto Aula #${(index % 30) + 1}`;
-        responsible = 'Prof. Carlos Mendoza';
-      } else {
-        envId = 'unassigned';
-      }
-    } else if (row.descripcion.includes('PLATAFORMAS') || row.descripcion.includes('SIMULADOR') || row.modelo.includes('OMEN')) {
-      envId = 'amb1';
-      envName = 'Ambiente 1: Lab Robótica e IA';
-      station = 'Zona Inmersiva RV/Simulación';
-      responsible = 'Ing. Lucía Vargas Méndez';
-    } else if (row.descripcion.includes('AIRE') || row.descripcion.includes('UPS')) {
-      envId = 'amb3';
-      envName = 'Ambiente 3: Taller de Electrónica';
-      station = 'Sala de Potencia y Climatización';
-      responsible = 'Prof. Alex Arana';
-    } else {
-      // Dejar como pendiente para que el usuario demuestre la asignación a ambientes
-      envId = 'unassigned';
-    }
-  }
-
-  // Detectar categoría
-  let category = 'Equipos de Cómputo';
-  let photo = 'https://images.unsplash.com/photo-1593642632823-8f785ba67e45?auto=format&fit=crop&w=600&q=80';
-
-  if (row.descripcion.includes('AIRE')) {
-    category = 'Climatización & Planta';
-    photo = 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=600&q=80';
-  } else if (row.descripcion.includes('SILLA') || row.descripcion.includes('MESA') || row.descripcion.includes('ESCRITORIO') || row.descripcion.includes('LOCKER')) {
-    category = 'Mobiliario Institucional';
-    photo = 'https://images.unsplash.com/photo-1580481077195-c3288b584061?auto=format&fit=crop&w=600&q=80';
-  } else if (row.descripcion.includes('MONITOR') || row.descripcion.includes('TELEVISOR')) {
-    category = 'Monitores & Pantallas';
-    photo = 'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?auto=format&fit=crop&w=600&q=80';
-  } else if (row.descripcion.includes('TABLET') || row.descripcion.includes('DIGITALIZADORA')) {
-    category = 'Tablets & Digitalizadoras';
-    photo = 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=600&q=80';
-  } else if (row.descripcion.includes('SIMULADOR') || row.descripcion.includes('PLATAFORMAS') || row.modelo.includes('XBOX')) {
-    category = 'Realidad Virtual & Simulación';
-    photo = 'https://images.unsplash.com/photo-1622979135225-d2ba269bc1df?auto=format&fit=crop&w=600&q=80';
-  } else if (row.descripcion.includes('ESCANER') || row.descripcion.includes('LECTOR')) {
-    category = 'Biometría & Periféricos';
-    photo = 'https://images.unsplash.com/photo-1589739900243-4b52cd9b104e?auto=format&fit=crop&w=600&q=80';
-  }
-
   const cleanSerial = row.serial && row.serial !== '.' && row.serial !== 'N/A' && row.serial !== 'SS' 
     ? row.serial 
     : `SENA-SN-${row.placa}`;
+
+  // Categoría precisa según la descripción institucional del SENA
+  let category = 'Computadores Portátiles';
+  let photo = 'https://images.unsplash.com/photo-1593642632823-8f785ba67e45?auto=format&fit=crop&w=600&q=80';
+
+  if (row.descripcion.includes('AIRE')) {
+    category = 'Climatización & Aires Acondicionados';
+    photo = 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=600&q=80';
+  } else if (row.descripcion.includes('CPU INTEGRADA') || row.modelo.includes('OPTIPLEX') || row.modelo.includes('PRO ONE')) {
+    category = 'Computadores All-In-One (AIO)';
+    photo = 'https://images.unsplash.com/photo-1587831990711-23ca6441447b?auto=format&fit=crop&w=600&q=80';
+  } else if (row.descripcion === 'CPU' && row.modelo.includes('PRECISION')) {
+    category = 'Workstations & CPUs Desktop';
+    photo = 'https://images.unsplash.com/photo-1591488320449-011701bb6704?auto=format&fit=crop&w=600&q=80';
+  } else if (row.descripcion.includes('MONITOR')) {
+    category = 'Monitores & Pantallas Interactivas';
+    photo = 'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?auto=format&fit=crop&w=600&q=80';
+  } else if (row.descripcion.includes('TABLETA') || row.descripcion.includes('TABLET')) {
+    category = 'Tabletas Digitalizadoras & Tablets';
+    photo = 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=600&q=80';
+  } else if (row.descripcion.includes('PLATAFORMAS') || row.descripcion.includes('SIMULADOR') || row.descripcion.includes('CONSOLA') || row.modelo.includes('OMEN')) {
+    category = 'Realidad Virtual, Simulación & Gaming';
+    photo = 'https://images.unsplash.com/photo-1622979135225-d2ba269bc1df?auto=format&fit=crop&w=600&q=80';
+  } else if (row.descripcion.includes('ESCANER') || row.descripcion.includes('LECTOR')) {
+    category = 'Biometría & Lectores de Código de Barras';
+    photo = 'https://images.unsplash.com/photo-1589739900243-4b52cd9b104e?auto=format&fit=crop&w=600&q=80';
+  } else if (row.descripcion.includes('SILLA') || row.descripcion.includes('MESA') || row.descripcion.includes('ESCRITORIO') || row.descripcion.includes('LOCKER') || row.descripcion.includes('TABLERO')) {
+    category = 'Mobiliario Institucional';
+    photo = 'https://images.unsplash.com/photo-1580481077195-c3288b584061?auto=format&fit=crop&w=600&q=80';
+  } else if (row.descripcion.includes('UPS') || row.descripcion.includes('IMPRESORA')) {
+    category = 'Potencia (UPS) & Impresión Láser';
+    photo = 'https://images.unsplash.com/photo-1612815154858-60aa4c59eaa6?auto=format&fit=crop&w=600&q=80';
+  }
+
+  // Asignación de ambiente inteligente por defecto
+  let envId: EnvironmentId = defaultEnvId || 'unassigned';
+  let envName = 'Sin Asignar (Depósito General)';
+  let station = 'Depósito General de Inventario';
+  let responsible = 'Por asignar en ambiente';
+  let physicalStatus: AssetPhysicalStatus = 'operativo';
+  let statusLabel = 'Operativo en Uso';
+
+  // Casos específicos para trazabilidad completa de Mesa de Servicio y Dañados
+  if (row.placa === '95271024606') {
+    // Dell Precision 3440 en Mesa de Servicio
+    envId = 'service';
+    envName = 'Mesa de Servicio & Diagnóstico';
+    station = 'Banco de Diagnóstico #02';
+    responsible = 'Tec. Marcos Peña (Soporte TI)';
+    physicalStatus = 'mesa_servicio';
+    statusLabel = 'En Diagnóstico Técnico';
+  } else if (row.placa === '95271024477') {
+    // Dell OptiPlex 7470AIO en Mesa de Servicio
+    envId = 'service';
+    envName = 'Mesa de Servicio & Diagnóstico';
+    station = 'Banco de Mantenimiento #01';
+    responsible = 'Téc. Laura Santos';
+    physicalStatus = 'mesa_servicio';
+    statusLabel = 'Mantenimiento Preventivo';
+  } else if (row.placa === '95276126') {
+    // Lector Symbol en Mesa de Servicio
+    envId = 'service';
+    envName = 'Mesa de Servicio & Diagnóstico';
+    station = 'Banco de Calibración';
+    responsible = 'Tec. Marcos Peña';
+    physicalStatus = 'mesa_servicio';
+    statusLabel = 'Calibración Óptica';
+  } else if (row.placa === '95271024071') {
+    // HP ProBook en Mesa de Servicio
+    envId = 'service';
+    envName = 'Mesa de Servicio & Diagnóstico';
+    station = 'Banco de Pruebas Móvil';
+    responsible = 'Ing. Roberto Gómez';
+    physicalStatus = 'mesa_servicio';
+    statusLabel = 'En Revisión de Flex';
+  } else if (row.placa === '95271022765') {
+    // Aire Mini Split dañado
+    envId = 'damaged';
+    envName = 'Almacén de Dañados / Bajas';
+    station = 'Estante D - Equipos Climatización';
+    responsible = 'Almacén General SENA';
+    physicalStatus = 'con_dano';
+    statusLabel = 'Fuga de Gas / Daño Compresor';
+  } else if (row.placa === '95271023980') {
+    // HP ProBook con daño
+    envId = 'damaged';
+    envName = 'Almacén de Dañados / Bajas';
+    station = 'Estante B - Laptops en Cuarentena';
+    responsible = 'Almacén General SENA';
+    physicalStatus = 'con_dano';
+    statusLabel = 'Pantalla Rota / Baja Técnica';
+  } else if (
+    row.placa.startsWith('1010411889') || // Nuevos HP Pro One 440 G9 de 2025
+    row.placa === '10104118696' ||        // Silla malla respaldo medio
+    row.placa === '10104118826'           // Locker 4 puestos
+  ) {
+    // Pendientes de asignar por el usuario
+    envId = 'unassigned';
+    envName = 'Sin Asignar (Depósito General)';
+    station = 'Depósito General de Recepciones (Pabellón A)';
+    responsible = 'Almacén Central SENA';
+    physicalStatus = 'operativo';
+    statusLabel = 'Pendiente Asignación a Ambiente';
+  } else if (!defaultEnvId) {
+    // Distribución a los 3 ambientes principales
+    if (
+      row.descripcion.includes('PLATAFORMAS') ||
+      row.descripcion.includes('SIMULADOR') ||
+      row.descripcion.includes('CONSOLA') ||
+      row.modelo.includes('OMEN') ||
+      row.placa === '101001130405' || // MacBook Pro
+      row.placa === '952715603' ||    // Pantalla Samsung 55"
+      row.placa === '95271028029' ||  // Tablero acrílico
+      row.placa === '95273317' ||     // Mesa de trabajo
+      row.placa === '95271026663' ||  // Silla apilable
+      row.placa === '95271026665' ||  // Silla apilable
+      row.placa === '95271025486' ||  // Aire 60k BTU
+      (row.descripcion.includes('PORTATIL') && (index % 2 === 0))
+    ) {
+      envId = 'amb1';
+      envName = 'Ambiente 1: Lab Robótica e IA';
+      station = `Estación Especializada IA #${(index % 12) + 1}`;
+      responsible = 'Ing. Lucía Vargas Méndez';
+    } else if (
+      row.descripcion.includes('CPU INTEGRADA') ||
+      row.modelo.includes('OPTIPLEX') ||
+      row.modelo.includes('PRO ONE') ||
+      row.modelo.includes('PRECISION 3440') ||
+      row.modelo.includes('P2219H') ||
+      row.placa === '952721722' ||    // One Screen
+      row.placa === '95271028147' ||  // Silla ergonómica
+      row.placa === '95271028282' ||  // Escritorio
+      row.placa === '95271025484' ||  // Aire 60k BTU
+      (row.descripcion.includes('PORTATIL') && (index % 2 === 1))
+    ) {
+      envId = 'amb2';
+      envName = 'Ambiente 2: Aula Cómputo & Redes';
+      station = `Puesto Aula Cómputo #${(index % 25) + 1}`;
+      responsible = 'Prof. Carlos Mendoza';
+    } else {
+      envId = 'amb3';
+      envName = 'Ambiente 3: Taller de Electrónica';
+      station = `Mesa de Trabajo Electrónica #${(index % 10) + 1}`;
+      responsible = 'Prof. Alex Arana';
+    }
+  }
 
   return {
     id: `ast-inst-${row.placa}`,
@@ -218,8 +293,8 @@ export function convertRawRowToSerialAsset(
     environmentId: envId,
     environmentName: envName,
     station,
-    physicalStatus: 'operativo',
-    statusLabel: envId === 'unassigned' ? 'Pendiente Asignación' : 'Operativo en Uso',
+    physicalStatus,
+    statusLabel,
     responsiblePerson: responsible,
     assignedDate: row.fechaAdquisicion,
     warrantyUntil: 'Nov 2026',

@@ -9,6 +9,7 @@ interface DashboardViewProps {
 export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   const { 
     categories, 
+    assets,
     movements, 
     activeEnvironmentTab, 
     setActiveEnvironmentTab, 
@@ -27,13 +28,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   );
 
   const envTabs: { id: EnvironmentId; label: string; count: number; icon: string }[] = [
-    { id: 'all', label: 'Todos los Ambientes', count: 1482, icon: 'domain' },
-    { id: 'amb1', label: 'Ambiente 1: Lab Robótica & IA', count: 490, icon: 'precision_manufacturing' },
-    { id: 'amb2', label: 'Ambiente 2: Aula Cómputo & Redes', count: 520, icon: 'lan' },
-    { id: 'amb3', label: 'Ambiente 3: Taller de Electrónica', count: 408, icon: 'memory' },
-    { id: 'service', label: 'Mesa de Servicio', count: 38, icon: 'support_agent' },
-    { id: 'damaged', label: 'Almacén de Dañados', count: 26, icon: 'warning' }
+    { id: 'all', label: 'Todos los Ambientes', count: assets.length, icon: 'domain' },
+    { id: 'amb1', label: 'Ambiente 1: Lab Robótica & IA', count: assets.filter(a => a.environmentId === 'amb1').length, icon: 'precision_manufacturing' },
+    { id: 'amb2', label: 'Ambiente 2: Aula Cómputo & Redes', count: assets.filter(a => a.environmentId === 'amb2').length, icon: 'lan' },
+    { id: 'amb3', label: 'Ambiente 3: Taller de Electrónica', count: assets.filter(a => a.environmentId === 'amb3').length, icon: 'memory' },
+    { id: 'service', label: 'Mesa de Servicio', count: assets.filter(a => a.environmentId === 'service').length, icon: 'support_agent' },
+    { id: 'damaged', label: 'Almacén de Dañados', count: assets.filter(a => a.environmentId === 'damaged').length, icon: 'warning' }
   ];
+
+  const totalAssetsCount = assets.length;
+  const operativeAssetsCount = assets.filter(a => a.physicalStatus === 'operativo').length;
+  const serviceAssetsCount = assets.filter(a => a.physicalStatus === 'mesa_servicio').length;
+  const damagedAssetsCount = assets.filter(a => a.physicalStatus === 'con_dano').length;
+  const operativePercent = totalAssetsCount > 0 ? ((operativeAssetsCount / totalAssetsCount) * 100).toFixed(1) : '100';
 
   return (
     <div className="flex flex-col gap-6 max-w-[1600px] mx-auto w-full">
@@ -141,21 +148,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/70 border border-slate-200/80 dark:border-white/10 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Total Activos
+              Total Activos SENA
             </span>
             <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold border border-emerald-300/60 dark:border-emerald-500/30">
-              <span className="material-symbols-outlined text-[12px]">trending_up</span> +12
+              <span className="material-symbols-outlined text-[12px]">verified</span> 100%
             </span>
           </div>
           <div className="my-2.5 flex items-baseline justify-between">
             <span className="font-headline text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-              1,482
+              {totalAssetsCount}
             </span>
-            <span className="font-mono text-xs text-slate-400">Unidades</span>
+            <span className="font-mono text-xs text-slate-400">Activos Únicos</span>
           </div>
           <div className="flex items-center gap-1.5 pt-2 border-t border-slate-100 dark:border-white/5 text-slate-500 dark:text-slate-400 text-[11px]">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-cyan-400"></span>
-            <span>100% trazables con serial único</span>
+            <span>Placas y seriales institucionales</span>
           </div>
         </div>
 
@@ -166,14 +173,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               Operativos
             </span>
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold border border-emerald-300/60 dark:border-emerald-500/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> 95.7%
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> {operativePercent}%
             </span>
           </div>
           <div className="my-2.5 flex items-baseline justify-between">
             <span className="font-headline text-2xl lg:text-3xl font-bold text-emerald-700 dark:text-emerald-300 tracking-tight">
-              1,418
+              {operativeAssetsCount}
             </span>
-            <span className="font-mono text-xs text-emerald-600 dark:text-emerald-400/80">Activos</span>
+            <span className="font-mono text-xs text-emerald-600 dark:text-emerald-400/80">En Aula</span>
           </div>
           <div className="flex items-center gap-1.5 pt-2 border-t border-slate-100 dark:border-white/5 text-slate-500 dark:text-slate-400 text-[11px]">
             <span>Ambientes 1, 2 y 3</span>
@@ -187,12 +194,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               Mesa Servicio
             </span>
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-[10px] font-bold border border-blue-300/60 dark:border-blue-500/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span> 2.5%
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span> {totalAssetsCount > 0 ? ((serviceAssetsCount / totalAssetsCount) * 100).toFixed(1) : 0}%
             </span>
           </div>
           <div className="my-2.5 flex items-baseline justify-between">
             <span className="font-headline text-2xl lg:text-3xl font-bold text-blue-700 dark:text-blue-300 tracking-tight">
-              38
+              {serviceAssetsCount}
             </span>
             <span className="font-mono text-xs text-blue-600 dark:text-blue-400/80">En revisión</span>
           </div>
@@ -208,17 +215,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               Con Daño / Bajas
             </span>
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-[10px] font-bold border border-rose-300/60 dark:border-rose-500/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span> 1.8%
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span> {totalAssetsCount > 0 ? ((damagedAssetsCount / totalAssetsCount) * 100).toFixed(1) : 0}%
             </span>
           </div>
           <div className="my-2.5 flex items-baseline justify-between">
             <span className="font-headline text-2xl lg:text-3xl font-bold text-rose-700 dark:text-rose-300 tracking-tight">
-              26
+              {damagedAssetsCount}
             </span>
             <span className="font-mono text-xs text-rose-600 dark:text-rose-400/80">Averiados</span>
           </div>
           <div className="flex items-center gap-1.5 pt-2 border-t border-slate-100 dark:border-white/5 text-slate-500 dark:text-slate-400 text-[11px]">
-            <span>Pendientes de dictamen</span>
+            <span>Almacén de Dañados</span>
           </div>
         </div>
 
@@ -226,20 +233,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         <div className="col-span-2 sm:col-span-2 lg:col-span-1 p-4 rounded-2xl bg-white dark:bg-slate-800/70 border border-slate-200/80 dark:border-white/10 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Alertas Stock
+              Categorías
             </span>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 text-[10px] font-bold border border-amber-300/60 dark:border-amber-500/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span> Crítico
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-[10px] font-bold border border-blue-300/60 dark:border-blue-500/30">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Activas
             </span>
           </div>
           <div className="my-2.5 flex items-baseline justify-between">
-            <span className="font-headline text-2xl lg:text-3xl font-bold text-amber-700 dark:text-amber-300 tracking-tight">
-              4
+            <span className="font-headline text-2xl lg:text-3xl font-bold text-blue-700 dark:text-blue-300 tracking-tight">
+              {categories.length}
             </span>
-            <span className="font-mono text-xs text-amber-600 dark:text-amber-400/80">Líneas</span>
+            <span className="font-mono text-xs text-blue-600 dark:text-cyan-400/80">Familias</span>
           </div>
           <div className="flex items-center gap-1.5 pt-2 border-t border-slate-100 dark:border-white/5 text-slate-500 dark:text-slate-400 text-[11px]">
-            <span>Bajo umbral de seguridad</span>
+            <span>Distribuidas en ambientes</span>
           </div>
         </div>
 
