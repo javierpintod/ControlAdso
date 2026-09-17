@@ -36,6 +36,10 @@ import {
   convertRawRowToSerialAsset,
   INITIAL_INSTITUTIONAL_ASSETS 
 } from '../data/institutionalAssets';
+import { 
+  generateWeeklyPhysicalSchedules, 
+  getWeekDaysForDate 
+} from '../utils/scheduleWeekUtils';
 
 interface RegisterMovementInput {
   type: MovementType;
@@ -69,6 +73,7 @@ interface AppContextType {
   voucherData: InventoryMovement | null;
   environments: Environment[];
   physicalSchedules: PhysicalInventorySchedule[];
+  resetWeeklySchedules: (baseDate?: string) => void;
   adminEmailAlerts: AdminEmailAlert[];
   adminEmailAddress: string;
   setAdminEmailAddress: (email: string) => void;
@@ -295,12 +300,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return INITIAL_ENVIRONMENTS;
   });
 
-  // Cronograma de Tomas Físicas Diarias (6:00 AM, 12:00 M, 6:00 PM)
+  // Cronograma de Tomas Físicas Semanales (Lunes a Sábado • 6:00 AM, 12:00 M, 6:00 PM)
   const [physicalSchedules, setPhysicalSchedules] = useState<PhysicalInventorySchedule[]>(() => {
     const saved = localStorage.getItem('controladso_schedules');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Validar que la información guardada tenga la cobertura semanal con sábado incluido
+        if (Array.isArray(parsed) && parsed.length >= 25 && parsed.some(s => s.date.includes('2026-09-19') || (s.shiftLabel && (s.shiftLabel.includes('Sabatino') || s.shiftLabel.includes('Sabatina'))))) {
+          return parsed;
+        }
       } catch (e) {
         console.error('Error parsing schedules:', e);
       }
@@ -453,61 +462,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setEnvironments(prev => [...prev, created]);
 
-    // Generar automáticamente las 3 jornadas de toma física para el ambiente
-    const today = new Date().toISOString().split('T')[0];
-    const newSchedules: PhysicalInventorySchedule[] = [
-      {
-        id: `sch-${created.id}-0600-${Date.now()}`,
-        environmentId: created.id,
-        environmentName: created.name,
-        instructorId: created.assignedInstructorId || 'usr-inst-1',
-        instructorName: created.assignedInstructorName || 'Sin Asignar',
-        instructorEmail: created.assignedInstructorEmail || 'instructor@sena.edu.co',
-        date: today,
-        shift: '06:00',
-        shiftLabel: 'Turno Mañana (06:00 AM)',
-        deadlineTime: '06:30 AM',
-        status: 'PENDIENTE',
-        totalItems: 0,
-        verifiedCount: 0,
-        missingCount: 0,
-        alertSent: false
-      },
-      {
-        id: `sch-${created.id}-1200-${Date.now()}`,
-        environmentId: created.id,
-        environmentName: created.name,
-        instructorId: created.assignedInstructorId || 'usr-inst-1',
-        instructorName: created.assignedInstructorName || 'Sin Asignar',
-        instructorEmail: created.assignedInstructorEmail || 'instructor@sena.edu.co',
-        date: today,
-        shift: '12:00',
-        shiftLabel: 'Turno Medio Día (12:00 M)',
-        deadlineTime: '12:30 PM',
-        status: 'PENDIENTE',
-        totalItems: 0,
-        verifiedCount: 0,
-        missingCount: 0,
-        alertSent: false
-      },
-      {
-        id: `sch-${created.id}-1800-${Date.now()}`,
-        environmentId: created.id,
-        environmentName: created.name,
-        instructorId: created.assignedInstructorId || 'usr-inst-1',
-        instructorName: created.assignedInstructorName || 'Sin Asignar',
-        instructorEmail: created.assignedInstructorEmail || 'instructor@sena.edu.co',
-        date: today,
-        shift: '18:00',
-        shiftLabel: 'Turno Tarde/Noche (06:00 PM)',
-        deadlineTime: '06:30 PM',
-        status: 'PENDIENTE',
-        totalItems: 0,
-        verifiedCount: 0,
-        missingCount: 0,
-        alertSent: false
-      }
+    // Generar automáticamente las jornadas de toma física para el nuevo ambiente para la semana completa (Lunes a Sábado • 3 turnos diarios)
+    const weekDays = getWeekDaysForDate('2026-09-17');
+    const shifts: { shift: ShiftType; deadline: string }[] = [
+      { shift: '06:00', deadline: '06:30 AM' },
+      { shift: '12:00', deadline: '12:30 PM' },
+      { shift: '18:00', deadline: '06:30 PM' }
     ];
+
+    const newSchedules: PhysicalInventorySchedule[] = [];
+    weekDays.forEach(dayInfo => {
+      shifts.forEach(s => {
+        const shiftLabel = dayInfo.isSaturday
+          ? s.shift === '06:00'
+            ? '06:00 AM • Apertura Taller Sabatino'
+            : s.shift === '12:00'
+            ? '12:00 M • Jornada Técnica Sabatina'
+            : '06:00 PM • Cierre Jornada Sabatina'
+          : s.shift === '06:00'
+          ? '06:00 AM • Apertura de Taller'
+          : s.shift === '12:00'
+          ? '12:00 M • Cambio de Jornada'
+          : '06:00 PM • Cierre Nocturno';
+
+        newSchedules.push({
+          id: `sch-${created.id}-${dayInfo.date}-${s.shift.replace(':', '')}-${Date.now()}`,
+          environmentId: created.id,
+          environmentName: created.name,
+          instructorId: created.assignedInstructorId || 'usr-inst-1',
+          instructorName: created.assignedInstructorName || 'Sin Asignar',
+          instructorEmail: created.assignedInstructorEmail || 'instructor@sena.edu.co',
+          date: dayInfo.date,
+          shift: s.shift,
+          shiftLabel,
+          deadlineTime: s.deadline,
+          status: 'PENDIENTE',
+          totalItems: 0,
+          verifiedCount: 0,
+          missingCount: 0,
+          alertSent: false
+        });
+      });
+    });
 
     setPhysicalSchedules(prev => [...prev, ...newSchedules]);
     showToast(`Ambiente "${created.name}" creado con éxito`, 'success', 'domain_add');
@@ -864,6 +860,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (count === 0) {
       showToast('Todos los turnos del día están al día o ya procesados.', 'info', 'check_circle');
     }
+  };
+
+  const resetWeeklySchedules = (baseDate: string = '2026-09-17') => {
+    const generated = generateWeeklyPhysicalSchedules(environments, baseDate);
+    setPhysicalSchedules(generated);
+    localStorage.setItem('controladso_schedules', JSON.stringify(generated));
+    showToast('Cronograma semanal (Lunes a Sábado) regenerado exitosamente', 'success', 'event_repeat');
   };
 
   const toggleTheme = () => {
@@ -1478,6 +1481,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         voucherData,
         environments,
         physicalSchedules,
+        resetWeeklySchedules,
         adminEmailAlerts,
         adminEmailAddress,
         setAdminEmailAddress,
