@@ -1,8 +1,13 @@
 <?php
 /**
- * Cierre de Sesión
+ * Cierre de Sesión y Revocación de JWT
  * ControlAdso - EduStock Asset Manager
  */
+
+require_once __DIR__ . '/config/auth.php';
+
+// Limpiar cookie y token JWT
+clearAuthToken();
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -18,5 +23,5 @@ if (ini_get("session.use_cookies")) {
 }
 session_destroy();
 
-header('Location: login.php');
+header('Location: login.php?msg=logged_out');
 exit;

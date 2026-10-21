@@ -80,8 +80,9 @@ Todos los usuarios cuentan con la contraseña predeterminada: **`admin123`** (o 
 
 ```text
 ├── config/
-│   ├── db.php               # Conexión PDO a MySQL (configurable por variables de entorno)
-│   └── auth.php             # Control de sesiones, autenticación y roles RBAC
+│   ├── db.php               # Conexión PDO a MySQL implementando el Patrón de Diseño SINGLETON
+│   ├── jwt.php              # Implementación RFC 7519 de JSON Web Token (HS256)
+│   └── auth.php             # Control de autenticación con JWT, cookies HTTP-Only y roles RBAC
 ├── database/
 │   └── schema.sql           # Esquema relacional DDL + Seed Data institucional SENA
 ├── includes/
@@ -117,8 +118,15 @@ Todos los usuarios cuentan con la contraseña predeterminada: **`admin123`** (o 
 
 ## ✨ Características Principales
 
-1. **Campos Oficiales SENA:** Regional (41), Centro de Costos (952710), Módulo (INVE), Número de Placa, Consecutivo, Serial y Valor de Ingreso.
-2. **Criptografía SHA-256:** Generación de actas de custodia digital no repudiables con hash inmutable de 64 caracteres.
-3. **Mesa de Ayuda con SLA:** Control de horas restantes según prioridad (Crítica 24h, Alta 48h, Media 72h, Baja 120h).
-4. **Toma Física In Situ:** Interfaz de cotejo para inventarios físicos con verificación de discrepancias.
-5. **Generador y Lector de Códigos QR:** Generación de rótulo patrimonial y escaneo en vivo con la cámara del dispositivo móvil o laptop.
+1. **Patrón de Diseño Singleton (`Database::getInstance()`):**
+   - Garantiza una única instancia de conexión PDO a MySQL para toda la ejecución de la petición.
+   - Constructor privado, prevención de clonación (`__clone()`) y prevención de deserialización (`__wakeup()`).
+2. **Autenticación con JSON Web Tokens (JWT - RFC 7519):**
+   - Firma criptográfica HMAC SHA-256 (`HS256`).
+   - Almacenamiento seguro en cookie `HTTP-Only` con SameSite Lax para protección contra ataques XSS y CSRF.
+   - Verificación de firma en tiempo constante (`hash_equals`) y expiración automática (`exp`).
+3. **Campos Oficiales SENA:** Regional (41), Centro de Costos (952710), Módulo (INVE), Número de Placa, Consecutivo, Serial y Valor de Ingreso.
+4. **Criptografía SHA-256 para Actas:** Generación de actas de custodia digital no repudiables con hash inmutable de 64 caracteres.
+5. **Mesa de Ayuda con SLA:** Control de horas restantes según prioridad (Crítica 24h, Alta 48h, Media 72h, Baja 120h).
+6. **Toma Física In Situ:** Interfaz de cotejo para inventarios físicos con verificación de discrepancias.
+7. **Generador y Lector de Códigos QR:** Generación de rótulo patrimonial y escaneo en vivo con la cámara del dispositivo móvil o laptop.

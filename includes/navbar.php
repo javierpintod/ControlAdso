@@ -20,11 +20,17 @@
     </div>
 
     <!-- Actions & Role Switcher -->
-    <div class="flex items-center space-x-4">
-        <!-- Database Status Pill -->
-        <a href="install.php" class="flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border <?= $dbConnected ? 'bg-emerald-950/40 border-emerald-700/50 text-emerald-400' : 'bg-amber-950/40 border-amber-700/50 text-amber-400' ?>">
+    <div class="flex items-center space-x-3">
+        <!-- JWT Session Indicator -->
+        <div class="hidden sm:flex items-center space-x-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-purple-950/40 border border-purple-700/50 text-purple-300" title="Autenticación basada en JSON Web Token (HS256)">
+            <i data-lucide="key-round" class="w-3 h-3 text-purple-400"></i>
+            <span>JWT Auth</span>
+        </div>
+
+        <!-- Database Singleton Status Pill -->
+        <a href="install.php" class="flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border <?= $dbConnected ? 'bg-emerald-950/40 border-emerald-700/50 text-emerald-400' : 'bg-amber-950/40 border-amber-700/50 text-amber-400' ?>" title="Conexión única administrada con Patrón Singleton">
             <span class="w-2 h-2 rounded-full <?= $dbConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400' ?>"></span>
-            <span>MySQL <?= $dbConnected ? 'Online' : 'Offline' ?></span>
+            <span>PDO Singleton: <?= $dbConnected ? 'Online' : 'Offline' ?></span>
         </a>
 
         <!-- Fast Role Switcher (para pruebas académicas SENA) -->
