@@ -7,6 +7,7 @@ $error = '';
 $success = '';
 
 require_once __DIR__ . '/factories/AssetFactoryProducer.php';
+require_once __DIR__ . '/src/repositories/AssetRepository.php';
 
 $environments = [];
 $categories = [];
@@ -67,55 +68,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'valor_ingreso' => $valorIngreso
             ]);
 
+            $assetRepository = new AssetRepository($db);
+            $assetRepository->create($asset, $descripcion, $modelo, $valorIngreso);
+
             $assetId = $asset->getId();
-            $serialNumber = $asset->getSerialNumber();
-            $assetCode = $asset->getAssetCode();
-            $name = $asset->getName();
-            $barcode = $asset->getBarcode();
-            $qrToken = $asset->getQrToken();
-            $statusLabel = $asset->getStatusLabel();
-            $warrantyUntil = $asset->getWarrantyUntil();
 
-            $sql = "INSERT INTO assets (
-                id, serial_number, asset_code, name, description,
-                category_id, category_name, environment_id, environment_name,
-                station, physical_status, status_label, responsible_person,
-                assigned_date, warranty_until, barcode, qr_token,
-                regional, centro_costo, modulo, modelo, consecutivo,
-                descripcion, descripcion_actual, tipo, placa, serial,
-                fecha_adquisicion, valor_ingreso
-            ) VALUES (
-                ?, ?, ?, ?, ?,
-                ?, ?, ?, ?,
-                ?, ?, ?, ?,
-                CURDATE(), ?, ?, ?,
-                '41', '952710', 'INVE', ?, ?,
-                ?, ?, 'Devolutivo', ?, ?,
-                DATE_FORMAT(CURDATE(), '%d/%m/%Y'), ?
-            )";
-
-            $stmt = $db->prepare($sql);
-            $stmt->execute([
-                $assetId, $serialNumber, $assetCode, $name, $asset->getDescription(),
-                $categoryId, $catName, $environmentId, $envName,
-                $station, $physicalStatus, $statusLabel, $responsible,
-                $warrantyUntil, $barcode, $qrToken,
-                $modelo, $asset->getConsecutivo(),
-                $descripcion, $asset->getDescription(), $placa, $serialNumber, $valorIngreso
-            ]);
-
-            // Registrar en la hoja de vida (asset_history)
-            $histStmt = $db->prepare("INSERT INTO asset_history (id, asset_id, title, date_str, time_str, description, author, event_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-            $histStmt->execute([
-                uniqid('hist-'),
-                $assetId,
-                'Alta de Activo en Inventario SENA (' . $factory->getFamilyName() . ')',
-                date('d/m/Y'),
-                date('h:i A'),
-                "Ingreso patrimonial procesado por " . get_class($factory) . " bajo el módulo INVE con placa {$placa} en {$envName}. Garantía hasta {$warrantyUntil}.",
-                $currentUser['name'],
-                'INVENTORY_IN'
-            ]);
+            $assetRepository->logHistoryCreation($asset, $factory->getFamilyName(), $currentUser['name']);
 
             header("Location: asset_detail.php?id=" . urlencode($assetId) . "&msg=created");
             exit;

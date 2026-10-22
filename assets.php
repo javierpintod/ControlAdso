@@ -1,6 +1,7 @@
 <?php
 $pageTitle = 'Inventario de Activos';
 require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/src/repositories/AssetRepository.php';
 
 $db = getDB();
 
@@ -18,38 +19,8 @@ if ($db) {
         $environments = $db->query("SELECT id, name FROM environments ORDER BY name ASC")->fetchAll();
         $categories = $db->query("SELECT id, name FROM product_categories ORDER BY name ASC")->fetchAll();
 
-        $sql = "SELECT * FROM assets WHERE 1=1";
-        $params = [];
-
-        if (!empty($q)) {
-            $sql .= " AND (placa LIKE ? OR serial_number LIKE ? OR name LIKE ? OR modelo LIKE ? OR asset_code LIKE ?)";
-            $wildcard = "%{$q}%";
-            $params[] = $wildcard;
-            $params[] = $wildcard;
-            $params[] = $wildcard;
-            $params[] = $wildcard;
-            $params[] = $wildcard;
-        }
-
-        if (!empty($envFilter)) {
-            $sql .= " AND environment_id = ?";
-            $params[] = $envFilter;
-        }
-
-        if (!empty($statusFilter)) {
-            $sql .= " AND physical_status = ?";
-            $params[] = $statusFilter;
-        }
-
-        if (!empty($catFilter)) {
-            $sql .= " AND category_id = ?";
-            $params[] = $catFilter;
-        }
-
-        $sql .= " ORDER BY created_at DESC LIMIT 100";
-        $stmt = $db->prepare($sql);
-        $stmt->execute($params);
-        $assets = $stmt->fetchAll();
+        $assetRepo = new AssetRepository($db);
+        $assets = $assetRepo->findAllWithFilters($q, $envFilter, $statusFilter, $catFilter);
     } catch (Exception $e) {
         $error = $e->getMessage();
     }
