@@ -6,6 +6,8 @@ $db = getDB();
 $error = '';
 $success = '';
 
+require_once __DIR__ . '/factories/AssetFactoryProducer.php';
+
 $environments = [];
 $categories = [];
 
@@ -33,13 +35,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'No hay conexión a la base de datos MySQL.';
     } else {
         try {
-            $assetId = 'ast-sena-' . $placa;
-            $assetCode = 'AST-' . $placa;
-            $serialNumber = !empty($serial) ? $serial : 'SENA-SN-' . $placa;
-            $name = !empty($modelo) ? "{$descripcion} {$modelo}" : $descripcion;
-            $barcode = '770' . substr(str_pad($placa, 10, '0', STR_PAD_LEFT), -10);
-            $qrToken = 'qr_sena_' . $placa;
-
             // Obtener nombre del ambiente y categoría
             $envStmt = $db->prepare("SELECT name FROM environments WHERE id = ?");
             $envStmt->execute([$environmentId]);
@@ -49,13 +44,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $catStmt->execute([$categoryId]);
             $catName = $catStmt->fetchColumn() ?: 'General';
 
-            $statusLabel = match($physicalStatus) {
-                'operativo' => 'Operativo en Uso',
-                'mesa_servicio' => 'En Mesa de Ayuda / Diagnóstico',
-                'con_dano' => 'Con Daño Físico / Depósito',
-                'mantenimiento' => 'En Mantenimiento Preventivo',
-                default => 'Decomisado / Baja'
-            };
+            // =========================================================================
+            // APLICACIÓN DEL PATRÓN FÁBRICA ABSTRACTA (Abstract Factory Pattern)
+            // =========================================================================
+            // 1. El productor resuelve la fábrica concreta según la categoría seleccionada
+            $factory = AssetFactoryProducer::getFactory($categoryId);
+
+            // 2. La fábrica concreta valida y construye el producto (ComputeAsset, InfrastructureAsset, etc.)
+            $asset = $factory->createAsset([
+                'placa' => $placa,
+                'serial' => $serial,
+                'descripcion' => $descripcion,
+                'modelo' => $modelo,
+                'descripcion_actual' => !empty($descripcionActual) ? $descripcionActual : $descripcion,
+                'category_id' => $categoryId,
+                'category_name' => $catName,
+                'environment_id' => $environmentId,
+                'environment_name' => $envName,
+                'station' => $station,
+                'physical_status' => $physicalStatus,
+                'responsible_person' => $responsible,
+                'valor_ingreso' => $valorIngreso
+            ]);
+
+            $assetId = $asset->getId();
+            $serialNumber = $asset->getSerialNumber();
+            $assetCode = $asset->getAssetCode();
+            $name = $asset->getName();
+            $barcode = $asset->getBarcode();
+            $qrToken = $asset->getQrToken();
+            $statusLabel = $asset->getStatusLabel();
+            $warrantyUntil = $asset->getWarrantyUntil();
 
             $sql = "INSERT INTO assets (
                 id, serial_number, asset_code, name, description,
@@ -69,19 +88,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ?, ?, ?, ?, ?,
                 ?, ?, ?, ?,
                 ?, ?, ?, ?,
-                CURDATE(), DATE_ADD(CURDATE(), INTERVAL 3 YEAR), ?, ?,
-                '41', '952710', 'INVE', ?, '297400',
+                CURDATE(), ?, ?, ?,
+                '41', '952710', 'INVE', ?, ?,
                 ?, ?, 'Devolutivo', ?, ?,
                 DATE_FORMAT(CURDATE(), '%d/%m/%Y'), ?
             )";
 
             $stmt = $db->prepare($sql);
             $stmt->execute([
-                $assetId, $serialNumber, $assetCode, $name, $descripcionActual,
+                $assetId, $serialNumber, $assetCode, $name, $asset->getDescription(),
                 $categoryId, $catName, $environmentId, $envName,
                 $station, $physicalStatus, $statusLabel, $responsible,
-                $barcode, $qrToken,
-                $modelo, $descripcion, $descripcionActual, $placa, $serialNumber, $valorIngreso
+                $warrantyUntil, $barcode, $qrToken,
+                $modelo, $asset->getConsecutivo(),
+                $descripcion, $asset->getDescription(), $placa, $serialNumber, $valorIngreso
             ]);
 
             // Registrar en la hoja de vida (asset_history)
@@ -89,10 +109,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $histStmt->execute([
                 uniqid('hist-'),
                 $assetId,
-                'Alta de Activo en Inventario SENA',
+                'Alta de Activo en Inventario SENA (' . $factory->getFamilyName() . ')',
                 date('d/m/Y'),
                 date('h:i A'),
-                "Ingreso patrimonial bajo el módulo INVE con placa {$placa} en {$envName}.",
+                "Ingreso patrimonial procesado por " . get_class($factory) . " bajo el módulo INVE con placa {$placa} en {$envName}. Garantía hasta {$warrantyUntil}.",
                 $currentUser['name'],
                 'INVENTORY_IN'
             ]);
@@ -100,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header("Location: asset_detail.php?id=" . urlencode($assetId) . "&msg=created");
             exit;
         } catch (Exception $e) {
-            $error = 'Error al registrar el activo: ' . $e->getMessage();
+            $error = 'Error en Fábrica Abstracta al registrar el activo: ' . $e->getMessage();
         }
     }
 }
@@ -118,6 +138,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <a href="assets.php" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition">
             &larr; Volver al inventario
         </a>
+    </div>
+
+    <!-- Indicador de Patrón de Diseño: Fábrica Abstracta -->
+    <div class="p-4 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-slate-900 to-blue-950/40 border border-emerald-500/30 shadow-lg">
+        <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center space-x-2">
+                <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    Patrón GoF: Fábrica Abstracta
+                </span>
+                <span class="text-xs font-semibold text-slate-200">Motor de Creación Polimórfica de Activos</span>
+            </div>
+            <span class="text-[10px] text-slate-400 font-mono">AssetFactoryProducer</span>
+        </div>
+        <p class="text-[11px] text-slate-400 mb-3">
+            El sistema selecciona dinámicamente la fábrica especializada según la familia del activo, calculando garantías, ciclos de mantenimiento y atributos institucionales del SENA sin acoplamiento a clases concretas.
+        </p>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px]">
+            <div class="p-2 rounded-xl bg-slate-950/60 border border-slate-800">
+                <p class="font-bold text-emerald-400">ITEquipmentFactory</p>
+                <p class="text-slate-400">Laptops, CPUs y AIOs</p>
+                <span class="text-[9px] text-emerald-500 font-semibold">Garantía: 3 años</span>
+            </div>
+            <div class="p-2 rounded-xl bg-slate-950/60 border border-slate-800">
+                <p class="font-bold text-cyan-400">InfrastructureFactory</p>
+                <p class="text-slate-400">Aires y Racks HVAC</p>
+                <span class="text-[9px] text-cyan-500 font-semibold">Garantía: 5 años</span>
+            </div>
+            <div class="p-2 rounded-xl bg-slate-950/60 border border-slate-800">
+                <p class="font-bold text-purple-400">RoboticsFactory</p>
+                <p class="text-slate-400">Robótica, VR e IoT</p>
+                <span class="text-[9px] text-purple-500 font-semibold">Garantía: 2 años</span>
+            </div>
+            <div class="p-2 rounded-xl bg-slate-950/60 border border-slate-800">
+                <p class="font-bold text-amber-400">FurnitureFactory</p>
+                <p class="text-slate-400">Mobiliario y Enseres</p>
+                <span class="text-[9px] text-amber-500 font-semibold">Garantía: 1 año</span>
+            </div>
+        </div>
     </div>
 
     <?php if (!empty($error)): ?>

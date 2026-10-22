@@ -121,12 +121,21 @@ Todos los usuarios cuentan con la contraseña predeterminada: **`admin123`** (o 
 1. **Patrón de Diseño Singleton (`Database::getInstance()`):**
    - Garantiza una única instancia de conexión PDO a MySQL para toda la ejecución de la petición.
    - Constructor privado, prevención de clonación (`__clone()`) y prevención de deserialización (`__wakeup()`).
-2. **Autenticación con JSON Web Tokens (JWT - RFC 7519):**
+2. **Patrón de Diseño Fábrica Abstracta (`AssetAbstractFactory` & `AssetFactoryProducer`):**
+   - Proporciona una interfaz unificada para crear familias de elementos institucionales (`AssetInterface`) sin acoplar el código cliente a clases concretas.
+   - **Familias de Productos Especializadas:**
+     - `ITEquipmentFactory` &rarr; `ComputeAsset`: Laptops, Workstations y Todo-En-Uno (Garantía tecnológica de 3 años, cálculo de CPU, RAM, almacenamiento y licencias).
+     - `InfrastructureFactory` &rarr; `InfrastructureAsset`: Climatización HVAC y Racks (Garantía de 5 años, ciclo trimestral de mantenimiento preventivo, capacidad BTU y refrigerante).
+     - `RoboticsFactory` &rarr; `RoboticsAsset`: Brazos robóticos 6-DOF, Simuladores VR y sensores IoT (Garantía de 2 años, calibración periódica y protocolos ROS2/Ethernet).
+     - `FurnitureFactory` &rarr; `FurnitureAsset`: Sillas ergonómicas, mesas y lockers (Garantía comercial de 1 año, resistencia y normas NTC 5655).
+   - **Productor de Fábricas (`AssetFactoryProducer::getFactory($categoryId)`):** Resuelve dinámicamente la fábrica apropiada a partir de la categoría seleccionada en `asset_create.php`.
+   - **Pruebas Automatizadas:** Ejecutable mediante `php tests/test_abstract_factory.php`.
+3. **Autenticación con JSON Web Tokens (JWT - RFC 7519):**
    - Firma criptográfica HMAC SHA-256 (`HS256`).
    - Almacenamiento seguro en cookie `HTTP-Only` con SameSite Lax para protección contra ataques XSS y CSRF.
    - Verificación de firma en tiempo constante (`hash_equals`) y expiración automática (`exp`).
-3. **Campos Oficiales SENA:** Regional (41), Centro de Costos (952710), Módulo (INVE), Número de Placa, Consecutivo, Serial y Valor de Ingreso.
-4. **Criptografía SHA-256 para Actas:** Generación de actas de custodia digital no repudiables con hash inmutable de 64 caracteres.
-5. **Mesa de Ayuda con SLA:** Control de horas restantes según prioridad (Crítica 24h, Alta 48h, Media 72h, Baja 120h).
-6. **Toma Física In Situ:** Interfaz de cotejo para inventarios físicos con verificación de discrepancias.
-7. **Generador y Lector de Códigos QR:** Generación de rótulo patrimonial y escaneo en vivo con la cámara del dispositivo móvil o laptop.
+4. **Campos Oficiales SENA:** Regional (41), Centro de Costos (952710), Módulo (INVE), Número de Placa, Consecutivo, Serial y Valor de Ingreso.
+5. **Criptografía SHA-256 para Actas:** Generación de actas de custodia digital no repudiables con hash inmutable de 64 caracteres.
+6. **Mesa de Ayuda con SLA:** Control de horas restantes según prioridad (Crítica 24h, Alta 48h, Media 72h, Baja 120h).
+7. **Toma Física In Situ:** Interfaz de cotejo para inventarios físicos con verificación de discrepancias.
+8. **Generador y Lector de Códigos QR:** Generación de rótulo patrimonial y escaneo en vivo con la cámara del dispositivo móvil o laptop.
