@@ -430,7 +430,7 @@ INSERT INTO inventory_movements (
 ) VALUES
 (
     'mov-001', 'MOV-SENA-2026-001', 'TRANSFER',
-    'COMPUTADOR PORTATIL PROBOOK 445R G6', 'ast-sena-95271024071', 'AST-95271024071', '5CD0037S7T',
+    'COMPUTADOR PORTATIL PRESCISION 3551', 'ast-sena-95271024817', 'AST-95271024817', 'CFH1DB3',
     'amb1', 'Ambiente 1: Lab Robotica e IA', 'amb2', 'Ambiente 2: Aula Computo & Redes ADSO',
     1, 'Reasignacion para practicas de desarrollo ADSO - Ficha 2670142', 'usr-admin', 'Carlos Mendoza', 'Administrador (Admin)', 'carlos.mendoza@edustock.edu',
     '2026-10-20 09:15:30', 'a89c2049e7b1a238fb012f4590c88b7123984eaf89104b2a8d11c01e765ba391', 'qr_verif_mov_001', 'COMPLETADO'
