@@ -130,12 +130,23 @@ Todos los usuarios cuentan con la contraseña predeterminada: **`admin123`** (o 
      - `FurnitureFactory` &rarr; `FurnitureAsset`: Sillas ergonómicas, mesas y lockers (Garantía comercial de 1 año, resistencia y normas NTC 5655).
    - **Productor de Fábricas (`AssetFactoryProducer::getFactory($categoryId)`):** Resuelve dinámicamente la fábrica apropiada a partir de la categoría seleccionada en `asset_create.php`.
    - **Pruebas Automatizadas:** Ejecutable mediante `php tests/test_abstract_factory.php`.
-3. **Autenticación con JSON Web Tokens (JWT - RFC 7519):**
+3. **Arquitectura Modelo-Vista-Controlador (MVC) y Principios SOLID:**
+   - **S (Single Responsibility Principle):** Cada capa tiene una responsabilidad única y delimitada:
+     - `Controllers`: Reciben la petición HTTP, delegan a los servicios y retornan la vista o JSON.
+     - `Services`: Lógica de dominio, cálculos criptográficos SHA-256, cálculo de SLA e integración con la Fábrica Abstracta.
+     - `Repositories`: Encapsulan exclusivamente las operaciones de persistencia SQL en MySQL.
+     - `Views`: Plantillas limpias sin consultas SQL embebidas.
+   - **O (Open/Closed Principle):** Enrutador Front-Controller extensible y fábricas abiertas para agregar nuevas familias sin alterar el núcleo.
+   - **L (Liskov Substitution Principle):** Cualquier repositorio que implemente los contratos de persistencia puede sustituirse sin quebrar los servicios o controladores.
+   - **I (Interface Segregation Principle):** Interfaces segregadas y enfocadas (`AssetRepositoryInterface`, `MovementRepositoryInterface`, `TicketRepositoryInterface`, `EnvironmentRepositoryInterface`, `UserRepositoryInterface`).
+   - **D (Dependency Inversion Principle):** Los controladores y servicios dependen de abstracciones/interfaces mediante un Contenedor de Inyección de Dependencias IoC (`App\Core\Container`), nunca de clases concretas o variables globales.
+   - **Pruebas Automatizadas:** Ejecutable mediante `php tests/test_mvc_solid.php` (10 pruebas unitarias con 100% PASS).
+4. **Autenticación con JSON Web Tokens (JWT - RFC 7519):**
    - Firma criptográfica HMAC SHA-256 (`HS256`).
    - Almacenamiento seguro en cookie `HTTP-Only` con SameSite Lax para protección contra ataques XSS y CSRF.
    - Verificación de firma en tiempo constante (`hash_equals`) y expiración automática (`exp`).
-4. **Campos Oficiales SENA:** Regional (41), Centro de Costos (952710), Módulo (INVE), Número de Placa, Consecutivo, Serial y Valor de Ingreso.
-5. **Criptografía SHA-256 para Actas:** Generación de actas de custodia digital no repudiables con hash inmutable de 64 caracteres.
-6. **Mesa de Ayuda con SLA:** Control de horas restantes según prioridad (Crítica 24h, Alta 48h, Media 72h, Baja 120h).
-7. **Toma Física In Situ:** Interfaz de cotejo para inventarios físicos con verificación de discrepancias.
-8. **Generador y Lector de Códigos QR:** Generación de rótulo patrimonial y escaneo en vivo con la cámara del dispositivo móvil o laptop.
+5. **Campos Oficiales SENA:** Regional (41), Centro de Costos (952710), Módulo (INVE), Número de Placa, Consecutivo, Serial y Valor de Ingreso.
+6. **Criptografía SHA-256 para Actas:** Generación de actas de custodia digital no repudiables con hash inmutable de 64 caracteres.
+7. **Mesa de Ayuda con SLA:** Control de horas restantes según prioridad (Crítica 24h, Alta 48h, Media 72h, Baja 120h).
+8. **Toma Física In Situ:** Interfaz de cotejo para inventarios físicos con verificación de discrepancias.
+9. **Generador y Lector de Códigos QR:** Generación de rótulo patrimonial y escaneo en vivo con la cámara del dispositivo móvil o laptop.
