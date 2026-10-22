@@ -37,8 +37,8 @@ export const normalizeSupabaseUrl = (inputUrl: string): string => {
 };
 
 // Leer de variables de entorno si están presentes
-const rawEnvUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const rawEnvKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const rawEnvUrl = (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_SUPABASE_URL : '') || '';
+const rawEnvKey = (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_SUPABASE_ANON_KEY : '') || '';
 
 // Fallback o anulación en localStorage
 const rawStoredUrl = typeof window !== 'undefined' ? localStorage.getItem('controladso_supabase_url') || '' : '';

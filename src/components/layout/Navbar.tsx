@@ -18,7 +18,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
     toggleTheme, 
     openModal, 
     showToast,
-    institutionProfile
+    institutionProfile,
+    jwtToken,
+    isJwtAuthenticated,
+    logoutJwt,
+    openJwtInspector
   } = useApp();
 
   return (
@@ -69,56 +73,89 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* Right side controls: Theme toggle, Notifications, RBAC live switcher, User Profile */}
-      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+      {/* Right side controls: Theme toggle, Notifications, JWT Auth controls, User Profile */}
+      <div className="flex items-center gap-2 sm:gap-3.5 shrink-0">
         
-        {/* Quick RBAC Switcher button (Critical for user to test Admin vs Consulta restrictions) */}
-        <div className="hidden md:flex items-center bg-slate-100 dark:bg-white/5 p-0.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs">
-          <button
-            onClick={() => switchRole('admin')}
-            className={`px-2.5 py-1 rounded-lg font-semibold transition-all flex items-center gap-1 ${
-              currentRole === 'admin'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-            }`}
-            title="Cambiar a Administrador (Acceso Total RW)"
-          >
-            <span className="material-symbols-outlined text-[14px]">admin_panel_settings</span>
-            <span>Admin</span>
-          </button>
-          <button
-            onClick={() => switchRole('consulta')}
-            className={`px-2.5 py-1 rounded-lg font-semibold transition-all flex items-center gap-1 ${
-              currentRole === 'consulta'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-            }`}
-            title="Cambiar a Auditor / Consulta (Solo Lectura)"
-          >
-            <span className="material-symbols-outlined text-[14px]">visibility</span>
-            <span>Consulta</span>
-          </button>
-        </div>
+        {/* Auth / Role controls */}
+        {isJwtAuthenticated ? (
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Quick RBAC Switcher for verified admins */}
+            <div className="hidden md:flex items-center bg-slate-100 dark:bg-white/5 p-0.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs">
+              <button
+                onClick={() => switchRole('admin')}
+                className={`px-2 py-1 rounded-lg font-semibold transition-all flex items-center gap-1 ${
+                  currentRole === 'admin'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                }`}
+                title="Modo Administrador (Escritura y Control)"
+              >
+                <span className="material-symbols-outlined text-[13px]">admin_panel_settings</span>
+                <span>Admin</span>
+              </button>
+              <button
+                onClick={() => switchRole('consulta')}
+                className={`px-2 py-1 rounded-lg font-semibold transition-all flex items-center gap-1 ${
+                  currentRole === 'consulta'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                }`}
+                title="Modo Consulta (Solo Lectura)"
+              >
+                <span className="material-symbols-outlined text-[13px]">visibility</span>
+                <span>Consulta</span>
+              </button>
+            </div>
 
-        {/* Personalización y Configuración Quick Shortcut */}
-        <button
-          onClick={() => onNavigate('personalizacion')}
-          className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-500/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-xs font-semibold transition-all active:scale-95"
-          title="Personalizar Institución, Ambientes y Registros"
-        >
-          <span className="material-symbols-outlined text-[16px]">tune</span>
-          <span>Personalizar</span>
-        </button>
+            {/* Logout button */}
+            <button
+              onClick={logoutJwt}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-600 dark:hover:text-rose-300 border border-slate-200 dark:border-white/10 hover:border-rose-300 dark:hover:border-rose-500/30 text-xs font-semibold text-slate-600 dark:text-slate-300 transition-all active:scale-95"
+              title="Cerrar sesión de Administrador (Volver a Consulta)"
+            >
+              <span className="material-symbols-outlined text-[15px]">logout</span>
+              <span className="hidden lg:inline">Salir</span>
+            </button>
+          </div>
+        ) : (
+          /* When in Consulta mode: Admin Login Button */
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => openModal('login')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all"
+              title="Ingresar como Administrador"
+            >
+              <span className="material-symbols-outlined text-[16px]">vpn_key</span>
+              <span>Acceso Admin</span>
+            </button>
+            <span className="hidden lg:inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 dark:bg-white/5 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              Consulta Pública
+            </span>
+          </div>
+        )}
 
-        {/* Supabase Database Quick Shortcut */}
-        <button
-          onClick={() => onNavigate('database')}
-          className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-xs font-semibold transition-all active:scale-95"
-          title="Ver Base de Datos y Esquema Supabase"
-        >
-          <span className="material-symbols-outlined text-[16px]">database</span>
-          <span>BD Supabase</span>
-        </button>
+        {/* Shortcuts for Admin Views when authenticated */}
+        {isJwtAuthenticated && (
+          <div className="hidden xl:flex items-center gap-1.5">
+            <button
+              onClick={() => onNavigate('personalizacion')}
+              className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-500/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 text-xs font-semibold transition-all active:scale-95"
+              title="Personalizar Institución, Ambientes y Registros"
+            >
+              <span className="material-symbols-outlined text-[15px]">tune</span>
+              <span>Ajustes</span>
+            </button>
+            <button
+              onClick={() => onNavigate('database')}
+              className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 text-xs font-semibold transition-all active:scale-95"
+              title="Base de Datos Supabase"
+            >
+              <span className="material-symbols-outlined text-[15px]">database</span>
+              <span>BD</span>
+            </button>
+          </div>
+        )}
 
         {/* Theme Toggle Button (Light/Dark Mode) */}
         <button
@@ -144,7 +181,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
 
         {/* User profile with role badge */}
         <div className="relative group flex items-center gap-2.5 pl-2 border-l border-slate-200 dark:border-white/10 cursor-pointer">
-          <div className="w-8 h-8 rounded-xl overflow-hidden ring-1 ring-blue-500/30 shadow-xs">
+          <div className={`w-8 h-8 rounded-xl overflow-hidden shadow-xs ${
+            isJwtAuthenticated ? 'ring-2 ring-emerald-500' : 'ring-1 ring-slate-300 dark:ring-slate-600'
+          }`}>
             <img
               src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80"
               alt="Foto de perfil de usuario"
@@ -157,29 +196,72 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
             </span>
             <div className="flex items-center gap-1 mt-0.5">
               <span className={`inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold ${
-                currentRole === 'admin'
+                isJwtAuthenticated && currentRole === 'admin'
                   ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-cyan-300'
                   : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
               }`}>
-                {currentRole === 'admin' ? 'Admin RBAC' : 'Consulta RO'}
+                {isJwtAuthenticated && currentRole === 'admin' ? 'Admin' : 'Consulta'}
               </span>
             </div>
           </div>
           <span className="material-symbols-outlined text-[18px] text-slate-400 hidden xl:block">expand_more</span>
           
           {/* Dropdown Menu */}
-          <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden">
-            <div className="px-3 py-2 border-b border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-slate-900/50">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Cambiar Usuario</span>
+          <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-2xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-slate-900/50">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                Sesión de Usuario
+              </span>
+              <span className="text-xs font-bold text-slate-900 dark:text-white block mt-0.5">
+                {currentUser.name}
+              </span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate block">
+                {currentUser.email}
+              </span>
             </div>
-            <div className="max-h-[250px] overflow-y-auto">
+
+            {/* Quick Actions */}
+            <div className="p-2 border-b border-slate-100 dark:border-white/10 space-y-1">
+              {isJwtAuthenticated ? (
+                <button
+                  onClick={logoutJwt}
+                  className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[16px]">logout</span>
+                  <span>Cerrar Sesión</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => openModal('login')}
+                  className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-blue-600 dark:text-cyan-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 flex items-center gap-2 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[16px]">vpn_key</span>
+                  <span>Iniciar Sesión como Admin</span>
+                </button>
+              )}
+            </div>
+
+            {/* Switch User Directory */}
+            <div className="px-3 py-1.5 bg-slate-50 dark:bg-slate-900/40 border-b border-slate-100 dark:border-white/10">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Directorio de Usuarios
+              </span>
+            </div>
+            <div className="max-h-[180px] overflow-y-auto p-1">
               {usersList.map(u => (
                 <button
                   key={u.id}
                   onClick={() => switchUser(u.id)}
-                  className={`w-full text-left px-3 py-2.5 flex flex-col gap-0.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-b border-slate-50 dark:border-white/5 last:border-0 ${currentUser.id === u.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                  className={`w-full text-left px-3 py-2 rounded-xl flex flex-col gap-0.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors ${currentUser.id === u.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
                 >
-                  <span className="text-xs font-semibold text-slate-900 dark:text-white truncate">{u.name}</span>
+                  <span className="text-xs font-semibold text-slate-900 dark:text-white truncate flex items-center justify-between">
+                    <span>{u.name}</span>
+                    {u.role === 'admin' && (
+                      <span className="text-[9px] font-mono px-1 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-cyan-300">
+                        JWT
+                      </span>
+                    )}
+                  </span>
                   <span className={`text-[10px] font-medium ${u.role === 'admin' ? 'text-blue-600 dark:text-cyan-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                     {u.roleTitle}
                   </span>

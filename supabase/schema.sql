@@ -401,6 +401,12 @@ CREATE POLICY "Admin write access on audit_sessions" ON audit_sessions FOR ALL U
 DROP POLICY IF EXISTS "Admin write access on user_profiles" ON user_profiles;
 CREATE POLICY "Admin write access on user_profiles" ON user_profiles FOR ALL USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Admin write access on campuses" ON campuses;
+CREATE POLICY "Admin write access on campuses" ON campuses FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Admin write access on environments" ON environments;
+CREATE POLICY "Admin write access on environments" ON environments FOR ALL USING (true) WITH CHECK (true);
+
 -- ==============================================================================
 -- 11. Datos Iniciales (Seed Data del TRD)
 -- ==============================================================================

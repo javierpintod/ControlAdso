@@ -13,7 +13,10 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigate }) => {
     currentRole, 
     switchRole, 
     showToast,
-    removeUser 
+    removeUser,
+    isJwtAuthenticated,
+    openJwtInspector,
+    logoutJwt
   } = useApp();
 
   return (
@@ -56,43 +59,60 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* Role Testing Interactive Box */}
-      <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-500/30 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
+      {/* Role & JWT Status Interactive Box */}
+      <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-500/30 flex flex-col lg:flex-row items-center justify-between gap-4 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-[22px]">admin_panel_settings</span>
+          <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+            <span className="material-symbols-outlined text-[24px]">vpn_key</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs font-bold text-slate-900 dark:text-white">
-              Simulador de Rol Activo (Prueba en Vivo)
-            </span>
-            <p className="text-xs text-slate-600 dark:text-slate-300">
-              Alterna tu rol para verificar cómo el sistema bloquea botones de transferencia, bajas y altas para auditores.
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-900 dark:text-white">
+                Estado de Seguridad JWT & Perfil Activo
+              </span>
+              {isJwtAuthenticated && (
+                <span className="px-2 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-mono text-[10px] font-bold">
+                  HMAC-SHA256 Válido
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+              {isJwtAuthenticated
+                ? 'Sesión de Administrador activa con Token JWT. Tienes permisos completos de lectura y escritura (RW).'
+                : 'Modo de Consulta pública activo. Para realizar cambios o administrar cuentas, debes ingresar con Token JWT.'}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => switchRole('admin')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              currentRole === 'admin'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10'
-            }`}
-          >
-            Administrador (RW)
-          </button>
-          <button
-            onClick={() => switchRole('consulta')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              currentRole === 'consulta'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10'
-            }`}
-          >
-            Auditor / Consulta (RO)
-          </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {isJwtAuthenticated ? (
+            <>
+              <button
+                onClick={() => switchRole('consulta')}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all flex items-center gap-1"
+                title="Cambiar temporalmente a vista de Consulta"
+              >
+                <span className="material-symbols-outlined text-[15px]">visibility</span>
+                <span>Modo Consulta</span>
+              </button>
+              <button
+                onClick={logoutJwt}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 shadow-sm transition-all flex items-center gap-1"
+                title="Cerrar sesión de Administrador"
+              >
+                <span className="material-symbols-outlined text-[15px]">logout</span>
+                <span>Cerrar Sesión</span>
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => openModal('login')}
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-md transition-all flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-[16px]">vpn_key</span>
+              <span>Iniciar Sesión como Admin</span>
+            </button>
+          )}
         </div>
       </div>
 

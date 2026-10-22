@@ -282,3 +282,31 @@ export interface ToastMessage {
   subMessage?: string;
   icon?: string;
 }
+
+export interface JwtHeader {
+  alg: 'HS256';
+  typ: 'JWT';
+}
+
+export interface JwtPayload {
+  sub: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  roleTitle: string;
+  authorizedEnvironments?: string[];
+  iss: string;
+  aud: string;
+  iat: number;
+  exp: number;
+  jti?: string;
+  authProvider?: 'supabase' | 'institutional_jwt';
+}
+
+export interface JwtSessionData {
+  token: string;
+  payload: JwtPayload;
+  user: User;
+  expiresAt: string;
+}
+

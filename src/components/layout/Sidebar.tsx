@@ -7,44 +7,51 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => {
-  const { ticket, categories, assets, adminEmailAlerts, institutionProfile } = useApp();
+  const { 
+    adminEmailAlerts, 
+    institutionProfile, 
+    isJwtAuthenticated, 
+    currentUser,
+    openModal, 
+    logoutJwt, 
+    openJwtInspector 
+  } = useApp();
 
   const navItems = [
     {
       id: 'dashboard',
       label: 'Dashboard General',
       icon: 'dashboard',
-      badge: null
-    },
-    {
-      id: 'personalizacion',
-      label: 'Personalización & Registros',
-      icon: 'tune',
-      badge: { count: 'Ajustes', color: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-400/30' }
+      badge: null,
+      adminOnly: false
     },
     {
       id: 'inventario',
       label: 'Inventario por Serial',
       icon: 'qr_code_scanner',
-      badge: null
+      badge: null,
+      adminOnly: false
     },
     {
       id: 'mesa-de-servicio',
       label: 'Mesa de Servicio',
       icon: 'support_agent',
-      badge: { count: 3, color: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-400/30' }
+      badge: { count: 3, color: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-400/30' },
+      adminOnly: false
     },
     {
       id: 'equipos-con-dano',
       label: 'Equipos con Daño',
       icon: 'build_circle',
-      badge: { count: 5, color: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-400/30' }
+      badge: { count: 5, color: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-400/30' },
+      adminOnly: false
     },
     {
       id: 'movimientos',
       label: 'Movimientos y Transferencias',
       icon: 'sync_alt',
-      badge: null
+      badge: null,
+      adminOnly: false
     },
     {
       id: 'auditoria',
@@ -52,31 +59,49 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
       icon: 'assignment_turned_in',
       badge: adminEmailAlerts.length > 0 
         ? { count: `${adminEmailAlerts.length} alerta${adminEmailAlerts.length > 1 ? 's' : ''}`, color: 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-400/30 animate-pulse' }
-        : { count: '6am•12m•6pm', color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-400/30' }
+        : { count: '6am•12m•6pm', color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-400/30' },
+      adminOnly: false
     },
     {
       id: 'escanear',
       label: 'Escanear Activo / QR',
       icon: 'center_focus_strong',
-      badge: null
-    },
-    {
-      id: 'usuarios',
-      label: 'Usuarios y Permisos',
-      icon: 'manage_accounts',
-      badge: null
+      badge: null,
+      adminOnly: false
     },
     {
       id: 'reportes',
       label: 'Reportes y Auditoría',
       icon: 'assignment',
-      badge: null
+      badge: null,
+      adminOnly: false
+    },
+    {
+      id: 'usuarios',
+      label: 'Usuarios y Permisos',
+      icon: 'manage_accounts',
+      badge: !isJwtAuthenticated 
+        ? { count: 'Admin', color: 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/10' } 
+        : null,
+      adminOnly: true
+    },
+    {
+      id: 'personalizacion',
+      label: 'Personalización & Registros',
+      icon: 'tune',
+      badge: !isJwtAuthenticated 
+        ? { count: 'Admin', color: 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/10' } 
+        : { count: 'Ajustes', color: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-400/30' },
+      adminOnly: true
     },
     {
       id: 'database',
       label: 'Base de Datos (Supabase)',
       icon: 'database',
-      badge: { count: 'SQL', color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-400/30' }
+      badge: !isJwtAuthenticated 
+        ? { count: 'Admin', color: 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/10' } 
+        : { count: 'SQL', color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-400/30' },
+      adminOnly: true
     }
   ];
 
@@ -147,8 +172,52 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
         </nav>
       </div>
 
-      {/* Server Live Status Card matching documentation */}
-      <div className="p-4 mx-3 mb-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-white/10 shadow-sm">
+      <div className="flex flex-col gap-3 mx-3 mb-4">
+        {/* Auth Status Card */}
+        {isJwtAuthenticated ? (
+          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-white/10 shadow-xs">
+            <div className="flex items-center justify-between mb-1">
+              <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-cyan-300">
+                <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                Administrador
+              </span>
+              <button
+                onClick={logoutJwt}
+                className="text-[10px] font-bold text-rose-600 hover:text-rose-700 dark:text-rose-400 flex items-center gap-0.5"
+                title="Cerrar sesión"
+              >
+                <span className="material-symbols-outlined text-[13px]">logout</span>
+                <span>Salir</span>
+              </button>
+            </div>
+            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+              {currentUser.name}
+            </p>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Control Total (Lectura y Escritura)
+            </p>
+          </div>
+        ) : (
+          <div className="p-3.5 rounded-2xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-500/30 shadow-xs">
+            <div className="flex items-center gap-1.5 mb-1 text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-cyan-300">
+              <span className="material-symbols-outlined text-[14px]">visibility</span>
+              <span>Modo Consulta RO</span>
+            </div>
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-tight mb-2.5">
+              Consulta pública activa. Para gestionar o editar:
+            </p>
+            <button
+              onClick={() => openModal('login')}
+              className="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-[15px]">vpn_key</span>
+              <span>Acceso Administrador</span>
+            </button>
+          </div>
+        )}
+
+        {/* Server Live Status Card matching documentation */}
+        <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-white/10 shadow-xs">
         <div className="flex items-center gap-2">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -169,6 +238,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
           <span className="font-mono font-semibold text-blue-600 dark:text-cyan-300">v1.2.0</span>
         </div>
       </div>
+    </div>
     </aside>
   );
 };

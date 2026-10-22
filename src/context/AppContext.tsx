@@ -17,8 +17,11 @@ import {
   PhysicalInventorySchedule,
   AdminEmailAlert,
   ShiftType,
-  InstitutionProfile
+  InstitutionProfile,
+  JwtPayload
 } from '../types';
+import { getStoredJwtSession, verifyJwtToken } from '../lib/jwt';
+import { authenticateWithJwt, logoutJwtSession } from '../lib/authService';
 import { 
   INITIAL_ENVIRONMENTS, 
   INITIAL_CATEGORIES, 
@@ -56,6 +59,12 @@ interface RegisterMovementInput {
 interface AppContextType {
   currentUser: User;
   currentRole: UserRole;
+  jwtToken: string | null;
+  jwtPayload: JwtPayload | null;
+  isJwtAuthenticated: boolean;
+  loginWithJwt: (email: string, pass: string) => Promise<{ success: boolean; message: string }>;
+  logoutJwt: () => Promise<void>;
+  openJwtInspector: () => void;
   currentCampus: { id: CampusId; name: string };
   theme: 'light' | 'dark';
   activeEnvironmentTab: EnvironmentId;
@@ -184,10 +193,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   });
 
+  // Default consultation user (Lucía Vargas, auditor/consulta)
+  const defaultConsultaUser = INITIAL_USERS.find(u => u.role === 'consulta') || INITIAL_USERS[1];
+
+  // Restoring saved JWT session if valid
+  const initialSavedSession = getStoredJwtSession();
+  const [jwtToken, setJwtToken] = useState<string | null>(initialSavedSession?.token || null);
+  const [jwtPayload, setJwtPayload] = useState<JwtPayload | null>(initialSavedSession?.payload || null);
+
   // Current User / Role State
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
-  const [currentRole, setCurrentRole] = useState<UserRole>('admin');
-  const [currentUser, setCurrentUser] = useState<User>(INITIAL_USERS[0]);
+  const [currentRole, setCurrentRole] = useState<UserRole>(
+    initialSavedSession?.payload?.role === 'admin' ? 'admin' : 'consulta'
+  );
+  const [currentUser, setCurrentUser] = useState<User>(
+    initialSavedSession?.payload?.role === 'admin' && initialSavedSession.user
+      ? initialSavedSession.user
+      : defaultConsultaUser
+  );
 
   // Campus
   const [currentCampus, setCurrentCampus] = useState<{ id: CampusId; name: string }>({
@@ -874,26 +897,73 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
   };
 
-  const switchRole = (newRole: UserRole) => {
-    setCurrentRole(newRole);
-    const matchedUser = users.find(u => u.role === newRole) || INITIAL_USERS.find(u => u.role === newRole) || INITIAL_USERS[0];
-    setCurrentUser(matchedUser);
-    
-    if (newRole === 'admin') {
-      showToast('Modo de acceso cambiado a: Administrador (RW - Control Total)', 'info');
-    } else if (newRole === 'consulta') {
-      showToast('Modo de acceso cambiado a: Auditor / Consulta (Solo Lectura)', 'info');
-    } else {
-      showToast('Modo de acceso cambiado a: Técnico de Soporte', 'info');
+  const loginWithJwt = async (email: string, pass: string): Promise<{ success: boolean; message: string }> => {
+    const result = await authenticateWithJwt(email, pass, users);
+    if (result.success && result.session && result.user) {
+      setJwtToken(result.session.token);
+      setJwtPayload(result.session.payload);
+      setCurrentRole(result.user.role);
+      setCurrentUser(result.user);
+      return { success: true, message: result.message };
     }
+    return { success: false, message: result.message };
+  };
+
+  const logoutJwt = async () => {
+    await logoutJwtSession();
+    setJwtToken(null);
+    setJwtPayload(null);
+    setCurrentRole('consulta');
+    setCurrentUser(defaultConsultaUser);
+    showToast('Sesión de Administrador cerrada. Has regresado a modo Consulta (Lectura).', 'info', 'lock');
+  };
+
+  const openJwtInspector = () => {
+    if (jwtToken) {
+      openModal('jwt-inspector');
+    } else {
+      showToast('No hay ningún Token JWT activo. Inicie sesión como Administrador.', 'warning', 'key');
+    }
+  };
+
+  const switchRole = (newRole: UserRole) => {
+    if (newRole === 'admin') {
+      if (!jwtToken || jwtPayload?.role !== 'admin') {
+        openModal('login');
+        showToast('Para acceder como Administrador, debes iniciar sesión con un Token JWT válido.', 'warning', 'lock');
+        return;
+      }
+      setCurrentRole('admin');
+      const adminUser = users.find(u => u.role === 'admin') || INITIAL_USERS[0];
+      setCurrentUser(adminUser);
+      showToast('Acceso Administrador (RW) activo con Token JWT verificado.', 'success', 'verified_user');
+      return;
+    }
+
+    if (newRole === 'consulta') {
+      setCurrentRole('consulta');
+      const consultaUser = users.find(u => u.role === 'consulta') || defaultConsultaUser;
+      setCurrentUser(consultaUser);
+      showToast('Modo de acceso: Auditor / Consulta (Solo Lectura - RO).', 'info', 'visibility');
+      return;
+    }
+
+    setCurrentRole(newRole);
+    const matchedUser = users.find(u => u.role === newRole) || INITIAL_USERS[0];
+    setCurrentUser(matchedUser);
   };
 
   const switchUser = (userId: string) => {
     const userToSwitch = users.find(u => u.id === userId);
     if (userToSwitch) {
+      if (userToSwitch.role === 'admin' && (!jwtToken || jwtPayload?.role !== 'admin')) {
+        openModal('login');
+        showToast('El usuario Administrador requiere autenticación con Token JWT.', 'warning', 'lock');
+        return;
+      }
       setCurrentUser(userToSwitch);
       setCurrentRole(userToSwitch.role);
-      showToast(`Sesión iniciada como: ${userToSwitch.name}`, 'success');
+      showToast(`Sesión cambiada a: ${userToSwitch.name}`, 'info');
     }
   };
 
@@ -1474,6 +1544,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         currentUser,
         currentRole,
+        jwtToken,
+        jwtPayload,
+        isJwtAuthenticated: !!jwtToken && currentRole === 'admin',
+        loginWithJwt,
+        logoutJwt,
+        openJwtInspector,
         currentCampus,
         theme,
         activeEnvironmentTab,

@@ -25,12 +25,16 @@ import { NewUserModal } from './components/modals/NewUserModal';
 import { DiscrepancyModal } from './components/modals/DiscrepancyModal';
 import { ScannerModal } from './components/modals/ScannerModal';
 import { EvidenceLightboxModal } from './components/modals/EvidenceLightboxModal';
+import { LoginModal } from './components/modals/LoginModal';
+import { JwtInspectorModal } from './components/modals/JwtInspectorModal';
+import { AdminAccessGate } from './components/common/AdminAccessGate';
 
 // Toast
 import { Toast } from './components/common/Toast';
 
 const MainLayout: React.FC = () => {
   const [currentView, setCurrentView] = useState<string>('dashboard');
+  const { isJwtAuthenticated } = useApp();
 
   const renderView = () => {
     switch (currentView) {
@@ -49,13 +53,40 @@ const MainLayout: React.FC = () => {
       case 'escanear':
         return <ScannerView onNavigate={setCurrentView} />;
       case 'usuarios':
-        return <UsersView onNavigate={setCurrentView} />;
+        return isJwtAuthenticated ? (
+          <UsersView onNavigate={setCurrentView} />
+        ) : (
+          <AdminAccessGate
+            moduleName="Usuarios, Roles & Permisos (RBAC)"
+            moduleDescription="Gestión de cuentas institucionales, perfiles de acceso y revocación de sesiones."
+            moduleIcon="manage_accounts"
+            onNavigate={setCurrentView}
+          />
+        );
       case 'reportes':
         return <ReportsView onNavigate={setCurrentView} />;
       case 'database':
-        return <DatabaseView onNavigate={setCurrentView} />;
+        return isJwtAuthenticated ? (
+          <DatabaseView onNavigate={setCurrentView} />
+        ) : (
+          <AdminAccessGate
+            moduleName="Base de Datos Supabase & Esquema SQL"
+            moduleDescription="Configuración de clústeres en la nube, credenciales de conexión y visualización de esquemas DDL."
+            moduleIcon="database"
+            onNavigate={setCurrentView}
+          />
+        );
       case 'personalizacion':
-        return <CustomizationView onNavigate={setCurrentView} />;
+        return isJwtAuthenticated ? (
+          <CustomizationView onNavigate={setCurrentView} />
+        ) : (
+          <AdminAccessGate
+            moduleName="Personalización Institucional & Registros"
+            moduleDescription="Ajustes de identidad del centro, personalización de ambientes y copias de seguridad del sistema."
+            moduleIcon="tune"
+            onNavigate={setCurrentView}
+          />
+        );
       default:
         return <DashboardView onNavigate={setCurrentView} />;
     }
@@ -91,6 +122,8 @@ const MainLayout: React.FC = () => {
       <DiscrepancyModal />
       <ScannerModal />
       <EvidenceLightboxModal />
+      <LoginModal />
+      <JwtInspectorModal />
 
       {/* Toast Notification Layer */}
       <Toast />
