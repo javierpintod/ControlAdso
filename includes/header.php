@@ -11,13 +11,7 @@ if (!defined('APP_INIT')) {
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
 
-// Si el usuario cambia de rol rápidamente desde la barra superior:
-if (isset($_GET['switch_role'])) {
-    switchUserRole($_GET['switch_role']);
-    $redirectUrl = strtok($_SERVER["REQUEST_URI"], '?');
-    header("Location: " . $redirectUrl);
-    exit;
-}
+requireAuth();
 
 $currentUser = getCurrentUser();
 $dbConnected = isDBConnected();

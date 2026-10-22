@@ -9,13 +9,6 @@ require_once __DIR__ . '/config/auth.php';
 
 $error = '';
 
-if (isset($_GET['quick_login'])) {
-    $role = $_GET['quick_login'];
-    switchUserRole($role);
-    header('Location: index.php');
-    exit;
-}
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
@@ -24,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: index.php');
         exit;
     } else {
-        $error = 'Credenciales no válidas. Puedes usar los botones de acceso rápido abajo para pruebas.';
+        $error = 'Credenciales no válidas.';
     }
 }
 ?>
@@ -65,7 +58,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <input 
                         type="email" 
                         name="email" 
-                        value="carlos.mendoza@edustock.edu" 
                         required 
                         class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
                     >
@@ -74,12 +66,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div>
                     <div class="flex items-center justify-between mb-1">
                         <label class="text-xs font-semibold text-slate-300">Contraseña</label>
-                        <span class="text-[10px] text-slate-500">Clave demo: admin123</span>
                     </div>
                     <input 
                         type="password" 
                         name="password" 
-                        value="admin123" 
                         required 
                         class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
                     >
@@ -91,36 +81,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </button>
             </form>
 
-            <div class="relative flex py-2 items-center">
-                <div class="flex-grow border-t border-slate-800"></div>
-                <span class="flex-shrink mx-2 text-[10px] text-slate-500 uppercase font-bold">O ingresar en 1 clic</span>
-                <div class="flex-grow border-t border-slate-800"></div>
-            </div>
-
-            <!-- Accesos Rápidos de Prueba -->
-            <div class="space-y-2">
-                <a href="?quick_login=admin" class="w-full py-2 bg-slate-950 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-xl text-xs font-medium flex items-center justify-between px-3 transition group">
-                    <div class="flex items-center space-x-2">
-                        <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
-                        <span>Carlos Mendoza</span>
-                    </div>
-                    <span class="text-[10px] text-slate-400 group-hover:text-emerald-400">Admin RW &rarr;</span>
-                </a>
-                <a href="?quick_login=tecnico" class="w-full py-2 bg-slate-950 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-xl text-xs font-medium flex items-center justify-between px-3 transition group">
-                    <div class="flex items-center space-x-2">
-                        <i data-lucide="wrench" class="w-4 h-4 text-blue-400"></i>
-                        <span>Tec. Marcos Peña</span>
-                    </div>
-                    <span class="text-[10px] text-slate-400 group-hover:text-blue-400">Técnico Soporte &rarr;</span>
-                </a>
-                <a href="?quick_login=consulta" class="w-full py-2 bg-slate-950 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-xl text-xs font-medium flex items-center justify-between px-3 transition group">
-                    <div class="flex items-center space-x-2">
-                        <i data-lucide="eye" class="w-4 h-4 text-purple-400"></i>
-                        <span>Dra. Carmen Morales</span>
-                    </div>
-                    <span class="text-[10px] text-slate-400 group-hover:text-purple-400">Auditora &rarr;</span>
-                </a>
-            </div>
         </div>
 
         <div class="text-center text-[11px] text-slate-500 space-y-1">

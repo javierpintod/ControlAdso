@@ -33,39 +33,10 @@
             <span>PDO Singleton: <?= $dbConnected ? 'Online' : 'Offline' ?></span>
         </a>
 
-        <!-- Fast Role Switcher (para pruebas académicas SENA) -->
-        <div class="relative group">
-            <button class="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs text-slate-200 hover:bg-slate-700 transition">
-                <i data-lucide="shield" class="w-3.5 h-3.5 text-emerald-400"></i>
-                <span class="capitalize font-semibold"><?= htmlspecialchars($currentUser['role']) ?></span>
-                <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400"></i>
-            </button>
-            <div class="absolute right-0 mt-1 w-52 bg-slate-800 border border-slate-700 rounded-xl shadow-xl py-1 hidden group-hover:block z-50">
-                <div class="px-3 py-1.5 border-b border-slate-700 text-[10px] uppercase font-bold text-slate-400">
-                    Cambiar Perfil de Demostración
-                </div>
-                <a href="?switch_role=admin" class="flex items-center px-3 py-2 text-xs text-slate-200 hover:bg-emerald-600/20 hover:text-emerald-300">
-                    <i data-lucide="shield-check" class="w-3.5 h-3.5 mr-2 text-emerald-400"></i>
-                    <div>
-                        <p class="font-medium">Carlos Mendoza</p>
-                        <p class="text-[10px] text-slate-400">Administrador General</p>
-                    </div>
-                </a>
-                <a href="?switch_role=tecnico" class="flex items-center px-3 py-2 text-xs text-slate-200 hover:bg-emerald-600/20 hover:text-emerald-300">
-                    <i data-lucide="wrench" class="w-3.5 h-3.5 mr-2 text-blue-400"></i>
-                    <div>
-                        <p class="font-medium">Tec. Marcos Peña</p>
-                        <p class="text-[10px] text-slate-400">Técnico Mesa de Ayuda</p>
-                    </div>
-                </a>
-                <a href="?switch_role=consulta" class="flex items-center px-3 py-2 text-xs text-slate-200 hover:bg-emerald-600/20 hover:text-emerald-300">
-                    <i data-lucide="eye" class="w-3.5 h-3.5 mr-2 text-purple-400"></i>
-                    <div>
-                        <p class="font-medium">Dra. Carmen Morales</p>
-                        <p class="text-[10px] text-slate-400">Auditora (Solo Consulta)</p>
-                    </div>
-                </a>
-            </div>
+        <!-- Current User Role -->
+        <div class="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs text-slate-200">
+            <i data-lucide="shield" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span class="capitalize font-semibold"><?= htmlspecialchars($currentUser['role']) ?></span>
         </div>
 
         <!-- Quick Action Button -->
