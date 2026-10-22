@@ -73,16 +73,7 @@ function getCurrentUser(): ?array {
         return $_SESSION['user'];
     }
 
-    // Usuario demo por defecto
-    return [
-        'id' => 'usr-admin',
-        'name' => 'Carlos Mendoza',
-        'email' => 'carlos.mendoza@edustock.edu',
-        'role' => 'admin',
-        'role_title' => 'Administrador General (Admin RW)',
-        'avatar_url' => 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-        'authorized_environments' => 'Todos los Ambientes'
-    ];
+    return null;
 }
 
 /**
@@ -129,7 +120,7 @@ function attemptLogin(string $email, string $password): bool {
         $user = $stmt->fetch();
 
         if ($user) {
-            if (password_verify($password, $user['password']) || $password === 'admin123' || $password === '123456') {
+            if (password_verify($password, $user['password'])) {
                 $payload = [
                     'sub' => $user['id'],
                     'name' => $user['name'],
@@ -145,50 +136,6 @@ function attemptLogin(string $email, string $password): bool {
         }
     }
 
-    // Fallback de usuarios predeterminados
-    $demoUsers = [
-        'carlos.mendoza@edustock.edu' => ['name' => 'Carlos Mendoza', 'role' => 'admin', 'role_title' => 'Administrador General (Admin RW)'],
-        'marcos.pena@edustock.edu' => ['name' => 'Tec. Marcos Peña', 'role' => 'tecnico', 'role_title' => 'Técnico de Soporte Mesa de Ayuda'],
-        'carmen.morales@edustock.edu' => ['name' => 'Dra. Carmen Morales', 'role' => 'consulta', 'role_title' => 'Auditora Externa (Consulta RO)'],
-    ];
-
-    if (isset($demoUsers[$email]) && ($password === 'admin123' || $password === '123456')) {
-        $payload = [
-            'sub' => 'usr-' . $demoUsers[$email]['role'],
-            'name' => $demoUsers[$email]['name'],
-            'email' => $email,
-            'role' => $demoUsers[$email]['role'],
-            'role_title' => $demoUsers[$email]['role_title'],
-            'avatar_url' => 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-            'authorized_environments' => 'Todos los Ambientes'
-        ];
-        setAuthToken($payload);
-        return true;
-    }
-
     return false;
 }
 
-/**
- * Conmutador rápido de roles emitiendo un nuevo JWT para demostración
- */
-function switchUserRole(string $role): void {
-    $rolesMap = [
-        'admin' => ['name' => 'Carlos Mendoza', 'email' => 'carlos.mendoza@edustock.edu', 'role_title' => 'Administrador General (Admin RW)'],
-        'tecnico' => ['name' => 'Tec. Marcos Peña', 'email' => 'marcos.pena@edustock.edu', 'role_title' => 'Técnico de Soporte Mesa de Ayuda'],
-        'consulta' => ['name' => 'Dra. Carmen Morales', 'email' => 'carmen.morales@edustock.edu', 'role_title' => 'Auditora Externa (Consulta RO)']
-    ];
-
-    if (isset($rolesMap[$role])) {
-        $payload = [
-            'sub' => 'usr-' . $role,
-            'name' => $rolesMap[$role]['name'],
-            'email' => $rolesMap[$role]['email'],
-            'role' => $role,
-            'role_title' => $rolesMap[$role]['role_title'],
-            'avatar_url' => 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-            'authorized_environments' => 'Todos los Ambientes'
-        ];
-        setAuthToken($payload);
-    }
-}

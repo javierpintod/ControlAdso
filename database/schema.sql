@@ -298,9 +298,9 @@ INSERT INTO product_categories (id, code, name, description, icon, amb1, amb2, a
 -- Usuarios
 -- Contrasena predeterminada para todos: admin123
 INSERT INTO user_profiles (id, name, email, password, role, role_title, authorized_environments, last_login, status) VALUES
-('usr-admin', 'Carlos Mendoza', 'carlos.mendoza@edustock.edu', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'Administrador General (Admin RW)', 'Todos los Ambientes', 'Activo ahora', 'active'),
-('usr-tecnico', 'Tec. Marcos Pena', 'marcos.pena@edustock.edu', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'tecnico', 'Tecnico de Soporte Mesa de Ayuda', 'Mesa de Servicio, Almacen Dano', 'Ayer, 05:40 PM', 'active'),
-('usr-auditor', 'Dra. Carmen Morales', 'carmen.morales@edustock.edu', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'consulta', 'Auditora Externa (Consulta RO)', 'Ambiente 1, Ambiente 2, Ambiente 3', 'Hoy, 08:30 AM', 'active');
+('usr-admin', 'Carlos Mendoza', 'carlos.mendoza@edustock.edu', '$2y$10$KBkFfNlGsk7d3067Rjj.t.cGYG24s0NvjKmH/Ef8/ffvmqJj05B4m', 'admin', 'Administrador General (Admin RW)', 'Todos los Ambientes', 'Activo ahora', 'active'),
+('usr-tecnico', 'Tec. Marcos Pena', 'marcos.pena@edustock.edu', '$2y$10$KBkFfNlGsk7d3067Rjj.t.cGYG24s0NvjKmH/Ef8/ffvmqJj05B4m', 'tecnico', 'Tecnico de Soporte Mesa de Ayuda', 'Mesa de Servicio, Almacen Dano', 'Ayer, 05:40 PM', 'active'),
+('usr-auditor', 'Dra. Carmen Morales', 'carmen.morales@edustock.edu', '$2y$10$KBkFfNlGsk7d3067Rjj.t.cGYG24s0NvjKmH/Ef8/ffvmqJj05B4m', 'consulta', 'Auditora Externa (Consulta RO)', 'Ambiente 1, Ambiente 2, Ambiente 3', 'Hoy, 08:30 AM', 'active');
 -- Insercion de Activos Institucionales SENA
 INSERT INTO assets (
     id, serial_number, asset_code, name, description,
