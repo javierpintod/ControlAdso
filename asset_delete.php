@@ -1,22 +1,13 @@
 <?php
-require_once __DIR__ . '/config/db.php';
-require_once __DIR__ . '/config/auth.php';
+declare(strict_types=1);
 
-requireRole('admin');
+/**
+ * Endpoint de Eliminación / Baja de Activo (Delegado a AssetController en MVC)
+ * ControlAdso - EduStock SENA
+ */
 
-$db = getDB();
-$id = trim($_GET['id'] ?? '');
+require_once __DIR__ . '/app/bootstrap.php';
 
-if ($db && !empty($id)) {
-    try {
-        $stmt = $db->prepare("DELETE FROM assets WHERE id = ?");
-        $stmt->execute([$id]);
-    } catch (Exception $e) {
-        // En caso de restricción de llave foránea, marcarlo como decomisado
-        $stmt = $db->prepare("UPDATE assets SET physical_status = 'decomisado', status_label = 'Decomisado / Baja' WHERE id = ?");
-        $stmt->execute([$id]);
-    }
-}
-
-header('Location: assets.php?msg=deleted');
-exit;
+$controller = App::resolve(\App\Controllers\AssetController::class);
+$response = $controller->delete(\App\Core\Request::capture());
+$response->send();
