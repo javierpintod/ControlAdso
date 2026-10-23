@@ -21,6 +21,9 @@ class MySqlTicketRepository implements TicketRepositoryInterface
 
     public function getAll(): array
     {
+        if ($this->db === null) {
+            return [];
+        }
         return $this->db->query("SELECT * FROM service_desk_tickets ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
     }
 
